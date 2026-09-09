@@ -72,17 +72,11 @@ public class FileDocument implements com.mendix.systemwideinterfaces.core.IEntit
 	 */
 	public static system.proxies.FileDocument initialize(com.mendix.systemwideinterfaces.core.IContext context, com.mendix.systemwideinterfaces.core.IMendixObject mendixObject)
 	{
-		if (mendixObject.isInstanceOf("OQL.CSVDownload")) {
-			return oql.proxies.CSVDownload.initialize(context, mendixObject);
-		}
 		if (mendixObject.isInstanceOf("System.Image")) {
 			return system.proxies.Image.initialize(context, mendixObject);
 		}
 		if (mendixObject.isInstanceOf("System.SynchronizationErrorFile")) {
 			return system.proxies.SynchronizationErrorFile.initialize(context, mendixObject);
-		}
-		if (mendixObject.isInstanceOf("FileUploader.UploadedFile")) {
-			return fileuploader.proxies.UploadedFile.initialize(context, mendixObject);
 		}
 		return new system.proxies.FileDocument(context, mendixObject);
 	}
