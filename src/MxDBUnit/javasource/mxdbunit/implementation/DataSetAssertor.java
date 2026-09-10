@@ -291,7 +291,7 @@ public class DataSetAssertor {
 			// Parse ISO formats with "+01:00", "+09:00", or "Z"
 			TemporalAccessor ta = DateTimeFormatter.ISO_DATE_TIME.parse(trimmed);
 			Instant instant = Instant.from(ta);
-			return instant.toString(); // 常に "2024-10-10T23:00:00Z" 形式に変換される
+			return instant.toString(); // It is always converted to the "2024-10-10T23:00:00Z" format.
 		} catch (Exception ignored) {
 			// Return as-is if it is not in a date format.
 		}
