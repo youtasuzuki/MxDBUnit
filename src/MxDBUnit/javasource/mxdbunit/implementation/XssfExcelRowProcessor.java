@@ -1,12 +1,13 @@
 package mxdbunit.implementation;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TimeZone;
-
-import org.apache.poi.ss.usermodel.DateUtil;
 
 import com.mendix.core.Core;
 import com.mendix.systemwideinterfaces.core.IContext;
@@ -94,24 +95,27 @@ public abstract class XssfExcelRowProcessor implements XssfExcelReader.RowProces
 		case Boolean:
 			return Boolean.parseBoolean(value);
 		case DateTime:
-			if (timeZoneId == null) {
-				timeZoneId = context.getSession().getTimeZone().getID();
-			}
-			if (value.matches("^[0-9]+$")) {
-				// If the value is a serial number, convert it to a date
-				Double serialValue = Double.valueOf(value);
-				java.util.Date dateValue = DateUtil.getJavaDate(serialValue, TimeZone.getTimeZone(timeZoneId));
-				return dateValue;
-			} else {
-				// Assuming the date is in ISO 8601 format
-				java.time.ZoneId zoneId = java.time.ZoneId.of(timeZoneId);
-				ZonedDateTime targetDateTime = OffsetDateTime.parse(value)
-						.atZoneSameInstant(zoneId);
-				java.util.Date dateValue = java.util.Date.from(targetDateTime.toInstant());
-				return dateValue;
-			}
+			return parseIso8601(value, ZoneId.of(timeZoneId));
 		default:
 			throw new IllegalArgumentException("Unsupported type: " + metaPrimitive.getType());
+		}
+	}
+
+	public static Date parseIso8601(String isoString, ZoneId defaultZone) {
+		// ISO 8601 format (a standard formatter that flexibly handles cases with or without time information)
+		DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+		try {
+			// 1. First, attempt the analysis with "Time Zone Included."
+			ZonedDateTime zdt = ZonedDateTime.parse(isoString, formatter);
+			// 2. Convert to java.util.Date and return it.
+			return Date.from(zdt.toInstant());
+		} catch (DateTimeParseException e) {
+			// 3. If an error occurs due to the absence of a time zone, parse it as "no time zone."
+			LocalDateTime ldt = LocalDateTime.parse(isoString, formatter);
+			// 4. Merge the specified time zone (defaultZone).
+			ZonedDateTime zdtWithDefault = ldt.atZone(defaultZone);
+			// 5. Convert to java.util.Date and return it.
+			return Date.from(zdtWithDefault.toInstant());
 		}
 	}
 

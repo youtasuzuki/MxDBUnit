@@ -14,27 +14,28 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import com.mendix.core.Core;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.UserAction;
-
 import mxdbunit.implementation.DataSetAssertor;
 import mxdbunit.implementation.IdentityResolver;
 import mxdbunit.implementation.XssfExcelReader;
 import mxdbunit.implementation.XssfExcelRowProcessor;
 
-public class AssertListByExcel extends UserAction<java.lang.Void> {
+public class AssertListByExcel extends UserAction<java.lang.Void>
+{
 	private final java.lang.String excelFilePath;
 	private final java.lang.String expectedSheetName;
 	private final java.util.List<IMendixObject> actualList;
 
 	public AssertListByExcel(
-			IContext context,
-			java.lang.String _excelFilePath,
-			java.lang.String _expectedSheetName,
-			java.util.List<IMendixObject> _actualList) {
+		IContext context,
+		java.lang.String _excelFilePath,
+		java.lang.String _expectedSheetName,
+		java.util.List<IMendixObject> _actualList
+	)
+	{
 		super(context);
 		this.excelFilePath = _excelFilePath;
 		this.expectedSheetName = _expectedSheetName;
@@ -42,19 +43,25 @@ public class AssertListByExcel extends UserAction<java.lang.Void> {
 	}
 
 	@java.lang.Override
-	public java.lang.Void executeAction() throws Exception {
+	public java.lang.Void executeAction() throws Exception
+	{
 		// BEGIN USER CODE
 		IdentityResolver identityResolver = (IdentityResolver) getContext().getData().get("IdentityResolver");
 		if (identityResolver == null) {
 			throw new com.mendix.systemwideinterfaces.MendixRuntimeException(
 					"IdentityResolver not found in context. Please run SettupByExcel first.");
 		}
-		String replacedFilePath = excelFilePath.replace("$HOME", System.getProperty("user.home")).replace("$RESOURCES",
+		String targetExcelFilePath = excelFilePath != null ? excelFilePath : (String) getContext().getData().get("LastExcelFilePath");
+		if (targetExcelFilePath == null) {
+			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Excel file path is not provided and no previous Excel file path found in context.");
+		}
+
+		String replacedFilePath = targetExcelFilePath.replace("$HOME", System.getProperty("user.home")).replace("$RESOURCES",
 				Core.getConfiguration().getResourcesPath().getAbsolutePath());
 		File excelFile = new File(replacedFilePath);
 
 		// Prefix completion (allowing "Expected_Customer" to be accepted when "Customer" is passed)
-		final String targetSheetName = this.expectedSheetName.toUpperCase().startsWith("EXPECTED_")
+		final String targetSheetName = this.expectedSheetName.startsWith("Expected_")
 				? this.expectedSheetName
 				: "Expected_" + this.expectedSheetName;
 
@@ -107,7 +114,8 @@ public class AssertListByExcel extends UserAction<java.lang.Void> {
 	 * @return a string representation of this action
 	 */
 	@java.lang.Override
-	public java.lang.String toString() {
+	public java.lang.String toString()
+	{
 		return "AssertListByExcel";
 	}
 

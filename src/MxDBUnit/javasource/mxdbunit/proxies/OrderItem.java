@@ -21,6 +21,7 @@ public class OrderItem implements com.mendix.systemwideinterfaces.core.IEntityPr
 	public enum MemberNames
 	{
 		Count("Count"),
+		Amount("Amount"),
 		OrderItem_Item("MxDBUnit.OrderItem_Item"),
 		OrderItem_Order("MxDBUnit.OrderItem_Order");
 
@@ -117,6 +118,42 @@ public class OrderItem implements com.mendix.systemwideinterfaces.core.IEntityPr
 	public final void setCount(com.mendix.systemwideinterfaces.core.IContext context, java.lang.Integer count)
 	{
 		getMendixObject().setValue(context, MemberNames.Count.toString(), count);
+	}
+
+	/**
+	 * @return value of Amount
+	 */
+	public final java.math.BigDecimal getAmount()
+	{
+		return getAmount(getContext());
+	}
+
+	/**
+	 * @param context
+	 * @return value of Amount
+	 */
+	public final java.math.BigDecimal getAmount(com.mendix.systemwideinterfaces.core.IContext context)
+	{
+		return (java.math.BigDecimal) getMendixObject().getValue(context, MemberNames.Amount.toString());
+	}
+
+	/**
+	 * Set value of Amount
+	 * @param amount
+	 */
+	public final void setAmount(java.math.BigDecimal amount)
+	{
+		setAmount(getContext(), amount);
+	}
+
+	/**
+	 * Set value of Amount
+	 * @param context
+	 * @param amount
+	 */
+	public final void setAmount(com.mendix.systemwideinterfaces.core.IContext context, java.math.BigDecimal amount)
+	{
+		getMendixObject().setValue(context, MemberNames.Amount.toString(), amount);
 	}
 
 	/**

@@ -94,6 +94,6 @@ public class ExcelDataLoader {
 	}
 
 	private static boolean isTargetSheet(String sheetName) {
-		return !sheetName.toUpperCase().startsWith("EXPECTED_") && !sheetName.startsWith("#");
+		return !sheetName.startsWith("Expected_") && !sheetName.startsWith("#");
 	}
 }

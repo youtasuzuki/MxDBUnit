@@ -22,7 +22,8 @@ public class Order implements com.mendix.systemwideinterfaces.core.IEntityProxy
 	{
 		OrderNumber("OrderNumber"),
 		OrderDate("OrderDate"),
-		CustomerName("CustomerName");
+		TotalAtamount("TotalAtamount"),
+		Order_Customer("MxDBUnit.Order_Customer");
 
 		private final java.lang.String metaName;
 
@@ -156,39 +157,86 @@ public class Order implements com.mendix.systemwideinterfaces.core.IEntityProxy
 	}
 
 	/**
-	 * @return value of CustomerName
+	 * @return value of TotalAtamount
 	 */
-	public final java.lang.String getCustomerName()
+	public final java.math.BigDecimal getTotalAtamount()
 	{
-		return getCustomerName(getContext());
+		return getTotalAtamount(getContext());
 	}
 
 	/**
 	 * @param context
-	 * @return value of CustomerName
+	 * @return value of TotalAtamount
 	 */
-	public final java.lang.String getCustomerName(com.mendix.systemwideinterfaces.core.IContext context)
+	public final java.math.BigDecimal getTotalAtamount(com.mendix.systemwideinterfaces.core.IContext context)
 	{
-		return (java.lang.String) getMendixObject().getValue(context, MemberNames.CustomerName.toString());
+		return (java.math.BigDecimal) getMendixObject().getValue(context, MemberNames.TotalAtamount.toString());
 	}
 
 	/**
-	 * Set value of CustomerName
-	 * @param customername
+	 * Set value of TotalAtamount
+	 * @param totalatamount
 	 */
-	public final void setCustomerName(java.lang.String customername)
+	public final void setTotalAtamount(java.math.BigDecimal totalatamount)
 	{
-		setCustomerName(getContext(), customername);
+		setTotalAtamount(getContext(), totalatamount);
 	}
 
 	/**
-	 * Set value of CustomerName
+	 * Set value of TotalAtamount
 	 * @param context
-	 * @param customername
+	 * @param totalatamount
 	 */
-	public final void setCustomerName(com.mendix.systemwideinterfaces.core.IContext context, java.lang.String customername)
+	public final void setTotalAtamount(com.mendix.systemwideinterfaces.core.IContext context, java.math.BigDecimal totalatamount)
 	{
-		getMendixObject().setValue(context, MemberNames.CustomerName.toString(), customername);
+		getMendixObject().setValue(context, MemberNames.TotalAtamount.toString(), totalatamount);
+	}
+
+	/**
+	 * @throws com.mendix.core.CoreException
+	 * @return value of Order_Customer
+	 */
+	public final mxdbunit.proxies.Customer getOrder_Customer() throws com.mendix.core.CoreException
+	{
+		return getOrder_Customer(getContext());
+	}
+
+	/**
+	 * @param context
+	 * @return value of Order_Customer
+	 * @throws com.mendix.core.CoreException
+	 */
+	public final mxdbunit.proxies.Customer getOrder_Customer(com.mendix.systemwideinterfaces.core.IContext context) throws com.mendix.core.CoreException
+	{
+		mxdbunit.proxies.Customer result = null;
+		com.mendix.systemwideinterfaces.core.IMendixIdentifier identifier = getMendixObject().getValue(context, MemberNames.Order_Customer.toString());
+		if (identifier != null) {
+			result = mxdbunit.proxies.Customer.load(context, identifier);
+		}
+		return result;
+	}
+
+	/**
+	 * Set value of Order_Customer
+	 * @param order_customer
+	 */
+	public final void setOrder_Customer(mxdbunit.proxies.Customer order_customer)
+	{
+		setOrder_Customer(getContext(), order_customer);
+	}
+
+	/**
+	 * Set value of Order_Customer
+	 * @param context
+	 * @param order_customer
+	 */
+	public final void setOrder_Customer(com.mendix.systemwideinterfaces.core.IContext context, mxdbunit.proxies.Customer order_customer)
+	{
+		if (order_customer == null) {
+			getMendixObject().setValue(context, MemberNames.Order_Customer.toString(), null);
+		} else {
+			getMendixObject().setValue(context, MemberNames.Order_Customer.toString(), order_customer.getMendixObject().getId());
+		}
 	}
 
 	@java.lang.Override

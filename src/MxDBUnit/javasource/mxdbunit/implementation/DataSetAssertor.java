@@ -1,6 +1,11 @@
 package mxdbunit.implementation;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,8 +91,14 @@ public class DataSetAssertor {
 
 			for (AbstractDelta<String> delta : patch.getDeltas()) {
 				diffReport.append("Change Type: ").append(delta.getType()).append("\n");
-				diffReport.append("Expected (-): ").append(delta.getSource().getLines()).append("\n");
-				diffReport.append("Actual   (+): ").append(delta.getTarget().getLines()).append("\n");
+				// Output the "Expected" row with a line break after each line.
+				for (String line : delta.getSource().getLines()) {
+					diffReport.append("Expected (-): ").append(line).append("\n");
+				}
+				// Output the Actual value rows, inserting a line break after each one.
+				for (String line : delta.getTarget().getLines()) {
+					diffReport.append("Actual   (+): ").append(line).append("\n");
+				}
 				diffReport.append("--------------------------------------------------\n");
 			}
 
@@ -203,7 +214,7 @@ public class DataSetAssertor {
 			}
 			if (sb.length() > 0)
 				sb.append(", ");
-			sb.append(cleanName).append("=").append(row.getOrDefault(rawHeader, ""));
+			sb.append(cleanName).append("=").append(normalizeStringValue(row.getOrDefault(rawHeader, "")));
 		}
 		return sb.toString();
 	}
@@ -231,7 +242,20 @@ public class DataSetAssertor {
 		IMetaPrimitive primitive = obj.getMetaObject().getMetaPrimitive(cleanHeaderName);
 		if (primitive != null) {
 			Object val = obj.getValue(context, cleanHeaderName);
-			return val != null ? val.toString() : "";
+			if (val == null)
+				return "";
+
+			// --- 1. Normalization of Decimal (Decimal / Currency) ---
+			if (val instanceof BigDecimal) {
+				BigDecimal decimalVal = (BigDecimal) val;
+				// Format values ​​like 0E-8 or 7400.00000000 to 7400 or 7400.5.
+				return decimalVal.stripTrailingZeros().toPlainString();
+			}
+			// --- 2. Standardized to the UTC-based ISO-8601 format ("2024-10-10T23:00:00Z") ---
+			if (val instanceof Date) {
+				return ((Date) val).toInstant().toString();
+			}
+			return val.toString();
 		}
 
 		// For associations (module name completion & reverse lookup of logical IDs)
@@ -248,6 +272,30 @@ public class DataSetAssertor {
 			}
 		}
 		return "";
+	}
+
+	private static String normalizeStringValue(String value) {
+		if (value == null)
+			return "";
+		String trimmed = value.trim();
+		// If the value appears to be numeric, attempt to normalize it via BigDecimal.
+		try {
+			if (trimmed.matches("^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$")) {
+				return new BigDecimal(trimmed).stripTrailingZeros().toPlainString();
+			}
+		} catch (Exception ignored) {
+		}
+
+		// 2. DateTime Normalization (Conversion of ISO-8601 and dates with offsets)
+		try {
+			// Parse ISO formats with "+01:00", "+09:00", or "Z"
+			TemporalAccessor ta = DateTimeFormatter.ISO_DATE_TIME.parse(trimmed);
+			Instant instant = Instant.from(ta);
+			return instant.toString(); // 常に "2024-10-10T23:00:00Z" 形式に変換される
+		} catch (Exception ignored) {
+			// Return as-is if it is not in a date format.
+		}
+		return trimmed;
 	}
 
 	private static String resolveAssociationName(IMendixObject object, String headerName) {

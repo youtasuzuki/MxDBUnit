@@ -34,7 +34,11 @@ public class AssertAllByExcel extends UserAction<java.lang.Void>
 		if (identityResolver == null) {
 			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("IdentityResolver not found in context. Please run SettupByExcel first.");
 		}
-		mxdbunit.implementation.ExcelDataAssertor.assertAll(getContext(), excelFilePath, identityResolver);
+		String targetExcelFilePath = excelFilePath != null ? excelFilePath : (String) getContext().getData().get("LastExcelFilePath");
+		if (targetExcelFilePath == null) {
+			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Excel file path is not provided and no previous Excel file path found in context.");
+		}
+		mxdbunit.implementation.ExcelDataAssertor.assertAll(getContext(), targetExcelFilePath, identityResolver);
 		return null;
 		// END USER CODE
 	}

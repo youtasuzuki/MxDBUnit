@@ -11,37 +11,26 @@ package mxdbunit.actions;
 
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.UserAction;
-import mxdbunit.implementation.ExcelDataLoader;
-import mxdbunit.implementation.IdentityResolver;
 import mxdbunit.implementation.TimeZoneResolver;
 
-public class LoadAllFromExcel extends UserAction<java.lang.Void>
+public class SetDefaultTimeZoneId extends UserAction<java.lang.Void>
 {
-	private final java.lang.String excelFilePath;
-	private final java.lang.Boolean doClean;
+	private final java.lang.String TimeZoneId;
 
-	public LoadAllFromExcel(
+	public SetDefaultTimeZoneId(
 		IContext context,
-		java.lang.String _excelFilePath,
-		java.lang.Boolean _doClean
+		java.lang.String _timeZoneId
 	)
 	{
 		super(context);
-		this.excelFilePath = _excelFilePath;
-		this.doClean = _doClean;
+		this.TimeZoneId = _timeZoneId;
 	}
 
 	@java.lang.Override
 	public java.lang.Void executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-		IdentityResolver identityResolver = (IdentityResolver) getContext().getData().get("IdentityResolver");
-		if (identityResolver == null) {
-			identityResolver = new IdentityResolver();
-			getContext().getData().put("IdentityResolver", identityResolver);
-		}
-		ExcelDataLoader.loadAll(getContext(), excelFilePath, TimeZoneResolver.getTimeZone(getContext()).toZoneId().getId(), identityResolver, doClean);
-		getContext().getData().put("LastExcelFilePath", excelFilePath);
+		TimeZoneResolver.setDefaultTimeZone(TimeZoneId);
 		return null;
 		// END USER CODE
 	}
@@ -53,7 +42,7 @@ public class LoadAllFromExcel extends UserAction<java.lang.Void>
 	@java.lang.Override
 	public java.lang.String toString()
 	{
-		return "LoadAllFromExcel";
+		return "SetDefaultTimeZoneId";
 	}
 
 	// BEGIN EXTRA CODE

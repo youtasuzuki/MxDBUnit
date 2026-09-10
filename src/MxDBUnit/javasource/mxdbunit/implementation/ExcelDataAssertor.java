@@ -34,7 +34,7 @@ public class ExcelDataAssertor {
 				excelFile,
 				// 1. SheetFilter: Expected_ で始まるシートのみ対象
 				sheetName -> {
-					if (sheetName.toUpperCase().startsWith("EXPECTED_")) {
+					if (sheetName.startsWith("Expected_")) {
 						sheetOrder.add(sheetName);
 						expectedSheetsData.put(sheetName, new ArrayList<>());
 						return true;
