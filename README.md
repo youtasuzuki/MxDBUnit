@@ -11,6 +11,8 @@ Easily verifies (via assertions) whether the database contents after program exe
 # Restrictions
 ## Currently, entity names of 30 characters or fewer are supported.
 ### There are plans to improve this using an alias definition sheet.
+## Many-to-many associations are not supported.
+### There are currently no plans to support them.
 ## Comparison results for entities with a large number of items can sometimes be difficult to read.
 ### There are plans to improve this by inserting markers to indicate the differences.
 # Dependencies
