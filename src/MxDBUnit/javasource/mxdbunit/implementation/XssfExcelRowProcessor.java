@@ -40,7 +40,7 @@ public abstract class XssfExcelRowProcessor implements XssfExcelReader.RowProces
 	}
 
 	protected IMendixObject createIMendixObject(IContext context, String entityType, Map<String, String> rowData,
-			String timeZoneId, IdentityResolver identityResolver) {
+			String timeZoneId, IdentityResolver identityResolver, int rowIndex) {
 		IMendixObject newObject = Core.instantiate(context, entityType);
 		for (Map.Entry<String, String> entry : rowData.entrySet()) {
 			String headerName = getHeaderName(entry.getKey());
@@ -50,6 +50,16 @@ public abstract class XssfExcelRowProcessor implements XssfExcelReader.RowProces
 			}
 			// 1. For logical ID columns -> Register with the ID resolver.
 			if (LOGICAL_ID_HEADER.equalsIgnoreCase(headerName)) {
+				if (cellValue ==  null || cellValue.trim().isEmpty()) {
+					throw new IllegalArgumentException("Logical ID cannot be empty "
+							+ headerName
+							+ "' in entity type '" + entityType + "' at row " + rowIndex + " vaule '" + cellValue
+							+ "'");
+				}
+				if (identityResolver.containsLogicalId(cellValue.trim())) {
+					throw new IllegalArgumentException("Duplicate logical ID '" + cellValue
+							+ "' in entity type '" + entityType + "' at row " + rowIndex);
+				}
 				identityResolver.register(cellValue, newObject.getId());
 				continue;
 			}
@@ -57,7 +67,13 @@ public abstract class XssfExcelRowProcessor implements XssfExcelReader.RowProces
 			IMetaPrimitive metaPrimitive = newObject.getMetaObject().getMetaPrimitive(headerName);
 			if (metaPrimitive != null) {
 				Object value = convertType(context, metaPrimitive, cellValue, timeZoneId);
-				newObject.setValue(context, headerName, value);
+				try {
+					newObject.setValue(context, headerName, value);
+				} catch (Exception e) {
+					throw new IllegalArgumentException("Error setting value for attribute '" + headerName
+							+ "' in entity type '" + entityType + "' at row " + rowIndex + " vaule '" + cellValue
+							+ "' : " + e.getMessage(), e);
+				}
 				continue;
 			}
 			// 3. In the case of an association (obtaining a reference from the Parent or Child side)

@@ -14,15 +14,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import com.mendix.core.Core;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.UserAction;
 import mxdbunit.implementation.DataSetAssertor;
+import mxdbunit.implementation.ExcelDataLoader;
 import mxdbunit.implementation.IdentityResolver;
 import mxdbunit.implementation.XssfExcelReader;
 import mxdbunit.implementation.XssfExcelRowProcessor;
 
+/**
+ * You can individually assert a list of objects in Excel. This method allows you to assert uncommitted objects as well—even non-persistent entities.
+ */
 public class AssertListByExcel extends UserAction<java.lang.Void>
 {
 	private final java.lang.String excelFilePath;
@@ -51,19 +54,20 @@ public class AssertListByExcel extends UserAction<java.lang.Void>
 			throw new com.mendix.systemwideinterfaces.MendixRuntimeException(
 					"IdentityResolver not found in context. Please run SettupByExcel first.");
 		}
-		String targetExcelFilePath = excelFilePath != null ? excelFilePath : (String) getContext().getData().get("LastExcelFilePath");
+		String targetExcelFilePath = excelFilePath != null ? excelFilePath
+				: (String) getContext().getData().get("LastExcelFilePath");
 		if (targetExcelFilePath == null) {
-			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Excel file path is not provided and no previous Excel file path found in context.");
+			throw new com.mendix.systemwideinterfaces.MendixRuntimeException(
+					"Excel file path is not provided and no previous Excel file path found in context.");
 		}
 
-		String replacedFilePath = targetExcelFilePath.replace("$HOME", System.getProperty("user.home")).replace("$RESOURCES",
-				Core.getConfiguration().getResourcesPath().getAbsolutePath());
+		String replacedFilePath = ExcelDataLoader.convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
 
-		// Prefix completion (allowing "Expected_Customer" to be accepted when "Customer" is passed)
-		final String targetSheetName = this.expectedSheetName.startsWith("Expected_")
+		// Prefix completion (allowing "=Customer" to be accepted when "Customer" is passed)
+		final String targetSheetName = this.expectedSheetName.startsWith("=")
 				? this.expectedSheetName
-				: "Expected_" + this.expectedSheetName;
+				: "=" + this.expectedSheetName;
 
 		List<Map<String, String>> expectedRows = new ArrayList<>();
 

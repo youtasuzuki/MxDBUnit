@@ -15,6 +15,26 @@ public final class Microflows
 	private Microflows() {}
 
 	// These are the microflows for the MyFirstModule module
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder aCT_LoadSample1Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.ACT_LoadSample1");
+		return builder;
+	}
+
+	public static void aCT_LoadSample1(IContext context)
+	{
+		aCT_LoadSample1Builder().execute(context);
+	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder aCT_LoadSample2Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.ACT_LoadSample2");
+		return builder;
+	}
+
+	public static void aCT_LoadSample2(IContext context)
+	{
+		aCT_LoadSample2Builder().execute(context);
+	}
 	public static com.mendix.core.actionmanagement.MicroflowCallBuilder aSU_StartupBuilder()
 	{
 		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.ASU_Startup");
@@ -25,15 +45,5 @@ public final class Microflows
 	{
 		Object result = aSU_StartupBuilder().execute(context);
 		return (boolean) result;
-	}
-	public static com.mendix.core.actionmanagement.MicroflowCallBuilder myFirstLogicBuilder()
-	{
-		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.MyFirstLogic");
-		return builder;
-	}
-
-	public static void myFirstLogic(IContext context)
-	{
-		myFirstLogicBuilder().execute(context);
 	}
 }

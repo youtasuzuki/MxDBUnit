@@ -13,47 +13,47 @@ import com.mendix.systemwideinterfaces.core.IMendixObject;
 public class ExcelDataAssertor {
 
 	/**
-	 * Excel内のすべての Expected_ シートを一括で読み込み、実績（DB）と検証します。
-	 * 途中のシートでエラーが出ても止まらず、全シートの検証完了後にエラーをまとめて通知します。
-	 */
-	public static void assertAll(IContext context, String excelFilePath, IdentityResolver identityResolver) throws Exception {
+	* It reads all sheets in the Excel file in a batch and validates them against actual data (DB). 
+	* It does not stop if an error occurs in an intermediate sheet; instead, it aggregates and reports all errors after validating every sheet.
+	*/
+	public static void assertAll(IContext context, String excelFilePath, IdentityResolver identityResolver)
+			throws Exception {
 
-		String replacedFilePath = excelFilePath.replace("$HOME", System.getProperty("user.home")).replace("$RESOURCES",
-				Core.getConfiguration().getResourcesPath().getAbsolutePath());
+		String replacedFilePath = ExcelDataLoader.convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
 
-		// 各シートの行データ（ヘッダー含む）を保持するマップ
+		// A map holding the row data (including headers) for each sheet.
 		// SheetName -> List<RowDataMap>
 		Map<String, List<Map<String, String>>> expectedSheetsData = new HashMap<>();
-		List<String> sheetOrder = new ArrayList<>(); // シートの出現順を保持
+		List<String> sheetOrder = new ArrayList<>(); // Preserve sheet appearance order
 
 		// ----------------------------------------------------
-		// Phase 1: XssfExcelReader で Expected_ シートのみを収集
+		// Phase 1: XssfExcelReader で = シートのみを収集
 		// ----------------------------------------------------
 		XssfExcelReader.readAllSheets(
 				excelFile,
-				// 1. SheetFilter: Expected_ で始まるシートのみ対象
+				// 1. SheetFilter: Applies only to sheets starting with =
 				sheetName -> {
-					if (sheetName.startsWith("Expected_")) {
+					if (sheetName.startsWith("=")) {
 						sheetOrder.add(sheetName);
 						expectedSheetsData.put(sheetName, new ArrayList<>());
 						return true;
 					}
 					return false;
 				},
-				// 2. RowProcessor: 行データをシートごとのリストに蓄積
+				// 2. RowProcessor: Accumulate row data into a list for each sheet.
 				new XssfExcelRowProcessor() {
 					private String activeSheetName;
 
 					@Override
 					public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
-						// 現在処理中のシート名を特定（最後のシート）
+						// Identify the name of the sheet currently being processed (the last sheet)
 						if (activeSheetName == null || rowIndex == 1) {
 							activeSheetName = sheetOrder.get(sheetOrder.size() - 1);
 							setupColumnNameMap(rowData);
 						}
 
-						// ヘッダー名でキーを貼り替えた RowMap の作成
+						// Creating a RowMap with keys replaced by header names
 						Map<String, String> formattedRow = new HashMap<>();
 						for (Map.Entry<String, String> entry : rowData.entrySet()) {
 							String header = getHeaderName(entry.getKey());
@@ -66,7 +66,7 @@ public class ExcelDataAssertor {
 				});
 
 		// ----------------------------------------------------
-		// Phase 2: シートごとに DB から実績を取得して検証
+		// Phase 2: Retrieve actual data from the database for each sheet and verify it.
 		// ----------------------------------------------------
 		StringBuilder aggregatedErrors = new StringBuilder();
 		int failureCount = 0;
@@ -77,8 +77,8 @@ public class ExcelDataAssertor {
 				continue;
 			}
 
-			// "Expected_Customer" -> "SalesModule.Customer" を EntityResolver で自動解決
-			String targetEntityLocalName = expectedSheetName.replace("Expected_", "");
+			// Automatically resolve "=Customer" to "SalesModule.Customer" using EntityResolver
+			String targetEntityLocalName = expectedSheetName.replace("=", "");
 			String targetEntityType = EntityResolver.resolve(targetEntityLocalName);
 
 			if (targetEntityType == null) {
@@ -88,11 +88,11 @@ public class ExcelDataAssertor {
 				continue;
 			}
 
-			// DBから実績データを全件取得
+			// Retrieve all actual data records from the database.
 			List<IMendixObject> actualObjects = Core.createXPathQuery("//" + targetEntityType)
-			        .execute(context);
+					.execute(context);
 
-			// 検証の実行 (DataSetAssertor)
+			// Executing Verification (DataSetAssertor)
 			try {
 				DataSetAssertor.compareTable(
 						context,
@@ -101,14 +101,14 @@ public class ExcelDataAssertor {
 						actualObjects,
 						identityResolver);
 			} catch (AssertionError e) {
-				// 個別のシートエラーをキャッチしてレポートに追記
+				// Catch individual sheet errors and append them to the report.
 				failureCount++;
 				aggregatedErrors.append(e.getMessage()).append("\n");
 			}
 		}
 
 		// ----------------------------------------------------
-		// Phase 3: 1つでも不一致シートがあればまとめて例外スロー
+		// Phase 3: Throw an exception if there is even a single mismatching sheet.
 		// ----------------------------------------------------
 		if (failureCount > 0) {
 			StringBuilder finalReport = new StringBuilder();

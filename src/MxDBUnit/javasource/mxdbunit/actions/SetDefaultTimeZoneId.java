@@ -13,6 +13,10 @@ import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.UserAction;
 import mxdbunit.implementation.TimeZoneResolver;
 
+/**
+ * Configure the time zone for MxDBUnit that applies at the application scope. This setting is used when no time zone is specified while reading date and time fields from Excel.
+ * Please call this from within the "After Startup" process.
+ */
 public class SetDefaultTimeZoneId extends UserAction<java.lang.Void>
 {
 	private final java.lang.String TimeZoneId;

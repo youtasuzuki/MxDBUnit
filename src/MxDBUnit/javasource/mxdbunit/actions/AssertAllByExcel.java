@@ -13,6 +13,9 @@ import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.UserAction;
 import mxdbunit.implementation.IdentityResolver;
 
+/**
+ * Perform a batch assertion for entities that have a corresponding "expected results" sheet in the Excel file.
+ */
 public class AssertAllByExcel extends UserAction<java.lang.Void>
 {
 	private final java.lang.String excelFilePath;

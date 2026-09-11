@@ -1,0 +1,2 @@
+These test data files are placed in the resources folder because they are samples; however, since files in the resources folder are archived into the deployment package, please designate a separate location for the test data files if you do not wish for them to be included.
+When specifying paths for actions that use Excel files, using the `$MXDBUNIT` variable causes it to be converted into an environment variable of the same name.

@@ -15,6 +15,9 @@ import mxdbunit.implementation.ExcelDataLoader;
 import mxdbunit.implementation.IdentityResolver;
 import mxdbunit.implementation.TimeZoneResolver;
 
+/**
+ * Entities for which preparation data exists in Excel are loaded in bulk and registered in the database.
+ */
 public class LoadAllFromExcel extends UserAction<java.lang.Void>
 {
 	private final java.lang.String excelFilePath;

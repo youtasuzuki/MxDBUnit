@@ -35,4 +35,24 @@ public final class Microflows
 	{
 		uT_Sample1Builder().execute(context);
 	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_Sample2Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MxDBUnit.UT_Sample2");
+		return builder;
+	}
+
+	public static void uT_Sample2(IContext context)
+	{
+		uT_Sample2Builder().execute(context);
+	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_Sample2_2Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MxDBUnit.UT_Sample2_2");
+		return builder;
+	}
+
+	public static void uT_Sample2_2(IContext context)
+	{
+		uT_Sample2_2Builder().execute(context);
+	}
 }

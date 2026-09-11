@@ -108,6 +108,7 @@ public class UserActionsRegistrar
     registrator.registerUserAction(mxdbunit.actions.LoadAllFromExcel.class);
     registrator.registerUserAction(mxdbunit.actions.SetContextTimeZoneId.class);
     registrator.registerUserAction(mxdbunit.actions.SetDefaultTimeZoneId.class);
+    registrator.registerUserAction(mxdbunit.actions.SetTestDataPathVariable.class);
     registrator.registerUserAction(system.actions.VerifyPassword.class);
     registrator.registerUserAction(unittesting.actions.AssertUsingExpression.class);
     registrator.registerUserAction(unittesting.actions.FindAllUnitTests.class);

@@ -11,31 +11,25 @@ package mxdbunit.actions;
 
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.UserAction;
-import mxdbunit.implementation.TimeZoneResolver;
 
-/**
- * This sets the time zone for MxDBUnit that applies within the context (i.e., within the test case). It is used when no time zone is specified while reading date/time fields from Excel.
- * Please call this at the beginning of the test.
- */
-public class SetContextTimeZoneId extends UserAction<java.lang.Void>
+public class SetTestDataPathVariable extends UserAction<java.lang.Void>
 {
-	private final java.lang.String TimeZoneId;
+	private final java.lang.String TestDataPath;
 
-	public SetContextTimeZoneId(
+	public SetTestDataPathVariable(
 		IContext context,
-		java.lang.String _timeZoneId
+		java.lang.String _testDataPath
 	)
 	{
 		super(context);
-		this.TimeZoneId = _timeZoneId;
+		this.TestDataPath = _testDataPath;
 	}
 
 	@java.lang.Override
 	public java.lang.Void executeAction() throws Exception
 	{
 		// BEGIN USER CODE
-		TimeZoneResolver.setContextTimeZone(getContext(), TimeZoneId);
-		return null;
+		throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Java action was not implemented");
 		// END USER CODE
 	}
 
@@ -46,7 +40,7 @@ public class SetContextTimeZoneId extends UserAction<java.lang.Void>
 	@java.lang.Override
 	public java.lang.String toString()
 	{
-		return "SetContextTimeZoneId";
+		return "SetTestDataPathVariable";
 	}
 
 	// BEGIN EXTRA CODE

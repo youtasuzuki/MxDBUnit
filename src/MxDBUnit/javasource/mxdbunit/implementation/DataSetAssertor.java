@@ -255,6 +255,10 @@ public class DataSetAssertor {
 			if (val instanceof Date) {
 				return ((Date) val).toInstant().toString();
 			}
+			// --- 3. Normalization of Boolean ---
+			if (val instanceof Boolean) {
+				return val.toString().toLowerCase();
+			}
 			return val.toString();
 		}
 
@@ -294,6 +298,10 @@ public class DataSetAssertor {
 			return instant.toString(); // It is always converted to the "2024-10-10T23:00:00Z" format.
 		} catch (Exception ignored) {
 			// Return as-is if it is not in a date format.
+		}
+		// --- 3. Normalization of Boolean ---
+		if (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false")) {
+			return value.toString().toLowerCase();
 		}
 		return trimmed;
 	}
