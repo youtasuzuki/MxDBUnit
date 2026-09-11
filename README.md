@@ -14,7 +14,7 @@ Easily verifies (via assertions) whether the database contents after program exe
 ## Many-to-many associations are not supported.
 ### There are currently no plans to support them.
 ## Comparison results for entities with a large number of items can sometimes be difficult to read.
-### There are plans to improve this by inserting markers to indicate the differences.
+### There are plans to improve this by inserting markers to indicate the differences. In the meantime, if you have trouble identifying which fields differ, please try using generative AI to check them.
 # Dependencies
 ### CommunityCommons Module
 ### UnitTesting Module
