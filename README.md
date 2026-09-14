@@ -1,6 +1,5 @@
 # Description
 MxDBUnit is a testing framework (an extension for the 'Unit Testing' module) designed to facilitate unit testing for database read and write operations in Mendix.  
-It is being developed with the goal of enabling a testing experience using DBUnit within Mendix.  
 
 To begin with, please check the contents within the StudioPro `_Samples` folder and the sample Excel files located in the `App/resources/mxdbunit` folder of the file system.    
 ## Key Features and Functions
@@ -29,6 +28,8 @@ Easily verifies (via assertions) whether the database contents after program exe
 There are plans to improve this using an alias definition sheet.
 ### Many-to-many associations are not supported.  
 There are currently no plans to support them.
+### Currently, only Excel format is supported for test data.  
+If there is demand, we will also support comparable text-based formats such as JSON/YAML.
 ### Comparison results for entities with a large number of items can sometimes be difficult to read.  
 There are plans to improve this by inserting markers to indicate the differences. In the meantime, if you have trouble identifying which fields differ, please try using generative AI to check them.
 # Dependencies
