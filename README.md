@@ -10,7 +10,8 @@ While Mendix automatically assigns physical IDs upon registration, you can freel
 Before test execution, data for multiple entities defined in the Excel file is loaded into the database in a single operation.  
 This clears or initializes the data beforehand, ensuring that each test begins from a clean state.
 ### Comparison with Expected Values:  
-Easily verifies (via assertions) whether the database contents after program execution match the expected results, using data defined in an Excel file.
+Easily verifies (via assertions) whether the database contents after program execution match the expected results, using data defined in an Excel file.  
+By converting entity data into text and comparing it using java-diff-utils, the system accurately presents the overall differences in a format that is easy for the person conducting the test to understand.
 # Rules for Test Data Excel Files
 ### There are a few simple rules.  
 - MxDBUnit treats sheets with names starting with "#" as documentation and ignores them.  
