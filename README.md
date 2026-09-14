@@ -10,7 +10,8 @@ While Mendix automatically assigns physical IDs upon registration, you can freel
 Before test execution, data for multiple entities defined in the Excel file is loaded into the database in a single operation.  
 This clears or initializes the data beforehand, ensuring that each test begins from a clean state.
 ### Comparison with Expected Values:  
-Easily verifies (via assertions) whether the database contents after program execution match the expected results, using data defined in an Excel file.
+Easily verifies (via assertions) whether the database contents after program execution match the expected results, using data defined in an Excel file.  
+By converting entity data into text and comparing it using java-diff-utils, the system accurately presents the overall differences in a format that is easy for the person conducting the test to understand.
 # Rules for Test Data Excel Files
 ### There are a few simple rules.  
 - MxDBUnit treats sheets with names starting with "#" as documentation and ignores them.  
@@ -29,9 +30,11 @@ There are plans to improve this using an alias definition sheet.
 ### Many-to-many associations are not supported.  
 There are currently no plans to support them.
 ### Currently, only Excel format is supported for test data.  
-If there is demand, we will also support comparable text-based formats such as JSON/YAML.
-### Comparison results for entities with a large number of items can sometimes be difficult to read.  
-There are plans to improve this by inserting markers to indicate the differences. In the meantime, if you have trouble identifying which fields differ, please try using generative AI to check them.
+If there is demand, we will also support comparable text-based formats such as JSON/YAML.  
+That said, it is also possible to check for differences in Excel using tools like TortoiseGit.
+### Because the objects are converted to strings for comparison using java-diff-utils, the (-) and (+) indicators may sometimes feel counterintuitive.
 # Dependencies
 ### CommunityCommons Module
 ### UnitTesting Module
+### poi-ooxml
+### java-diff-utils
