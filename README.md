@@ -36,3 +36,5 @@ There are plans to improve this by inserting markers to indicate the differences
 # Dependencies
 ### CommunityCommons Module
 ### UnitTesting Module
+### poi-ooxml
+### java-diff-utils
