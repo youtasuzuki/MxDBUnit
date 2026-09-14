@@ -32,8 +32,7 @@ There are currently no plans to support them.
 ### Currently, only Excel format is supported for test data.  
 If there is demand, we will also support comparable text-based formats such as JSON/YAML.  
 That said, it is also possible to check for differences in Excel using tools like TortoiseGit.
-### Comparison results for entities with a large number of items can sometimes be difficult to read.  
-There are plans to improve this by inserting markers to indicate the differences. In the meantime, if you have trouble identifying which fields differ, please try using generative AI to check them.
+### Because the objects are converted to strings for comparison using java-diff-utils, the (-) and (+) indicators may sometimes feel counterintuitive.
 # Dependencies
 ### CommunityCommons Module
 ### UnitTesting Module
