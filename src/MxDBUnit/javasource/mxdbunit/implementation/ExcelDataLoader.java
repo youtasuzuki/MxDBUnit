@@ -3,6 +3,7 @@ package mxdbunit.implementation;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,13 @@ public class ExcelDataLoader {
 
 		final String[] currentEntityType = new String[1];
 		final List<IMendixObject> commitBuffer = new ArrayList<>();
+		Map<String, List<IMendixObject>> nonPersistentEntityObjects = (Map<String, List<IMendixObject>>) context.getData()
+				.get("NonPersistentEntityObjects");
+		if (nonPersistentEntityObjects == null) {
+			nonPersistentEntityObjects = new HashMap<>();
+			context.getData().put("NonPersistentEntityObjects", nonPersistentEntityObjects);
+		}
+		final Map<String, List<IMendixObject>> npeMap = nonPersistentEntityObjects;
 
 		String replacedFilePath = convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
@@ -40,6 +48,10 @@ public class ExcelDataLoader {
 			// Perform deletion in reverse order (child to parent), taking dependencies into account.
 			Collections.reverse(targetEntities);
 			for (String entityType : targetEntities) {
+				if (!Core.getMetaObject(entityType).isPersistable()) {
+					logger.debug("Entity {" + entityType + "} is not persistable. Skipping deletion.");
+					continue; // Skip if not persistable
+				}
 				if (deletedEntities.contains(entityType)) {
 					logger.warn("Entity {" + entityType + "} has already been deleted. Skipping deletion.");
 					continue; // Skip if already deleted
@@ -57,6 +69,10 @@ public class ExcelDataLoader {
 				}
 				IMendixObject obj = createIMendixObject(
 						context, currentEntityType[0], rowData, timeZoneId, identityResolver, rowIndex);
+				if (!obj.getMetaObject().isPersistable()) {
+					// Add to the list of non-persistent entity object maps in the context.
+					npeMap.computeIfAbsent(currentEntityType[0], k -> new ArrayList<>()).add(obj);
+				}
 				commitBuffer.add(obj);
 				if (commitBuffer.size() >= 100) {
 					Core.commit(context, commitBuffer);
@@ -110,11 +126,16 @@ public class ExcelDataLoader {
 	private static boolean isTargetSheet(String sheetName) {
 		return !sheetName.startsWith("=") && !sheetName.startsWith("#");
 	}
-	
+
 	public static String convertPath(String path) {
-		String converted = path.replace("$MXDBUNIT", System.getenv("MXDBUNIT") != null ? System.getenv("MXDBUNIT") : "")
-				.replace("$HOME", System.getProperty("user.home"))
-				.replace("$RESOURCES", Core.getConfiguration().getResourcesPath().getAbsolutePath());
+		String mxdbunitEnv = System.getenv("MXDBUNIT") != null ? System.getenv("MXDBUNIT") : "";
+		String homeDir = System.getProperty("user.home") != null ? System.getProperty("user.home") : "";
+		String resourcesPath = Core.getConfiguration().getResourcesPath() != null
+				? Core.getConfiguration().getResourcesPath().getAbsolutePath()
+				: "";
+		String converted = path.replace("$MXDBUNIT", mxdbunitEnv)
+				.replace("$HOME", homeDir)
+				.replace("$RESOURCES", resourcesPath);
 		logger.debug("Converted excelFilePath from '" + path + "' to '" + converted + "'");
 		return converted;
 	}

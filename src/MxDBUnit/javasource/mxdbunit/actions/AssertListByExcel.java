@@ -61,7 +61,7 @@ public class AssertListByExcel extends UserAction<java.lang.Void>
 					"Excel file path is not provided and no previous Excel file path found in context.");
 		}
 
-		String replacedFilePath = ExcelDataLoader.convertPath(excelFilePath);
+		String replacedFilePath = ExcelDataLoader.convertPath(targetExcelFilePath);
 		File excelFile = new File(replacedFilePath);
 
 		// Prefix completion (allowing "=Customer" to be accepted when "Customer" is passed)

@@ -5,10 +5,13 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -37,53 +40,58 @@ public class DataSetAssertor {
 			return;
 		}
 
-		// Parsing the header row (first row) and extracting target attribute names.
+		// 1. Parsing the header row (first row) and extracting target attribute names.
 		Map<String, String> rawHeaderMap = expectedRows.get(0);
 		List<String> rawHeaders = new ArrayList<>(rawHeaderMap.values());
 
-		// Attributes to be compared (a clean list of attribute names excluding `Id` and System members)
-		List<String> cleanHeadersToCompare = new ArrayList<>();
-		for (String rawHeader : rawHeaders) {
-			String cleanName = cleanHeaderName(rawHeader);
-			if (!XssfExcelRowProcessor.LOGICAL_ID_HEADER.equalsIgnoreCase(cleanName) && !isSystemMember(cleanName)) {
-				cleanHeadersToCompare.add(cleanName);
-			}
-		}
-
-		// Construct a Map of [RowKey -> row string] from the expected data.
-		Map<String, String> expectedKeyToLine = new LinkedHashMap<>();
+		// 2. Convert expected data to [RowKey -> Map<CleanHeader, NormalizedValue>]
+		Map<String, Map<String, String>> expectedKeyToMap = new LinkedHashMap<>();
 		for (int i = 1; i < expectedRows.size(); i++) {
 			Map<String, String> rawRow = expectedRows.get(i);
 			String rowKey = extractExpectedRowKey(rawHeaders, rawRow, i);
-			expectedKeyToLine.put(rowKey, formatExpectedRowToString(rawHeaders, rawRow));
+			expectedKeyToMap.put(rowKey, convertRowToNormalizedMap(rawHeaders, rawRow));
 		}
 
-		// Construct a Map of [RowKey -> Row String] from actual data.
-		Map<String, String> actualKeyToLine = new LinkedHashMap<>();
+		// 3. Convert actual data into [RowKey -> Map<CleanHeader, NormalizedValue>].
+		Map<String, Map<String, String>> actualKeyToMap = new LinkedHashMap<>();
 		for (int i = 0; i < actualObjects.size(); i++) {
 			IMendixObject actualObj = actualObjects.get(i);
 			String rowKey = extractActualRowKey(context, rawHeaders, actualObj, identityResolver, i + 1);
-			actualKeyToLine.put(rowKey, formatActualObjectToString(context, rawHeaders, actualObj, identityResolver));
+			actualKeyToMap.put(rowKey, convertObjectToNormalizedMap(context, rawHeaders, actualObj, identityResolver));
 		}
 
-		// Retrieve the set of unique RowKeys and sort them in ascending order.
+		// 4. Retrieve the set of unique RowKeys and sort them.
 		Set<String> allRowKeys = new TreeSet<>();
-		allRowKeys.addAll(expectedKeyToLine.keySet());
-		allRowKeys.addAll(actualKeyToLine.keySet());
+		allRowKeys.addAll(expectedKeyToMap.keySet());
+		allRowKeys.addAll(actualKeyToMap.keySet());
 
 		List<String> sortedExpectedLines = new ArrayList<>();
 		List<String> sortedActualLines = new ArrayList<>();
 
-		// Generate a text list comparing Expected and Actual values ​​for each RowKey.
+		// 5. Compare attributes for each RowKey, extract keys with discrepancies, and generate a highlighted display.
 		for (String key : allRowKeys) {
-			String expLine = expectedKeyToLine.getOrDefault(key, "[MISSING ROW] Key: " + key);
-			String actLine = actualKeyToLine.getOrDefault(key, "[EXTRA UNEXPECTED ROW] Key: " + key);
-			sortedExpectedLines.add("[" + key + "] " + expLine);
-			sortedActualLines.add("[" + key + "] " + actLine);
+		    Map<String, String> expMap = expectedKeyToMap.get(key);
+		    Map<String, String> actMap = actualKeyToMap.get(key);
+
+		    if (expMap != null && actMap != null) {
+		        // [CHANGE] When present in both but attribute values ​​differ
+		        Set<String> mismatchKeys = findMismatchKeys(expMap, actMap);
+		        sortedExpectedLines.add("[" + key + "] " + formatMapToString(expMap, mismatchKeys));
+		        sortedActualLines.add("[" + key + "] " + formatMapToString(actMap, mismatchKeys));
+		    } else if (expMap != null) {
+		        // [MISSING] Present in the expected values ​​but absent from the actual data (lost or never created).
+		        sortedExpectedLines.add("[" + key + "] " + formatMapToString(expMap, Collections.emptySet()));
+		        sortedActualLines.add("[" + key + "] << MISSING IN DB (The data does not exist in the database.) >>");
+		    } else {
+		        // [EXTRA] Not included in the expected values ​​but present as an excess in the actual data (over-produced).
+		    	sortedExpectedLines.add("[" + key + "] << UNEXPECTED IN DB (Excel does not have a definition for expected value.) >>");
+		        sortedActualLines.add("[" + key + "] " + formatMapToString(actMap, Collections.emptySet()));
+		    }
 		}
 
 		// Diff detection using java-diff-utils
 		Patch<String> patch = DiffUtils.diff(sortedExpectedLines, sortedActualLines);
+
 		if (!patch.getDeltas().isEmpty()) {
 			StringBuilder diffReport = new StringBuilder();
 			diffReport.append("\n[MxDBUnit Verification Failed] Sheet: ").append(sheetName).append("\n");
@@ -109,6 +117,77 @@ public class DataSetAssertor {
 	// ==========================================
 	// RowKey extraction logic (priority control)
 	// ==========================================
+
+	/**
+	 * Compares the "expected" and "actual" maps and returns a set of attribute names where the values ​​do not match.
+	 */
+	private static Set<String> findMismatchKeys(Map<String, String> expMap, Map<String, String> actMap) {
+		Set<String> mismatchKeys = new HashSet<>();
+		Set<String> allKeys = new HashSet<>();
+		allKeys.addAll(expMap.keySet());
+		allKeys.addAll(actMap.keySet());
+
+		for (String key : allKeys) {
+			String expVal = expMap.getOrDefault(key, "");
+			String actVal = actMap.getOrDefault(key, "");
+			if (!Objects.equals(expVal, actVal)) {
+				mismatchKeys.add(key);
+			}
+		}
+		return mismatchKeys;
+	}
+
+	/**
+	 * Generate a string of attributes from the Map (add [!=] to headers with mismatched attributes)
+	 */
+	private static String formatMapToString(Map<String, String> map, Set<String> mismatchKeys) {
+		StringBuilder sb = new StringBuilder();
+		for (Map.Entry<String, String> entry : map.entrySet()) {
+			String key = entry.getKey();
+			String val = entry.getValue();
+
+			if (sb.length() > 0)
+				sb.append(", ");
+
+			// Insert the marker [!=] at points of mismatch!
+			if (mismatchKeys.contains(key)) {
+				sb.append("[!=]");
+			}
+			sb.append(key).append("=").append(val);
+		}
+		return sb.toString();
+	}
+
+	// ==========================================
+	// Mapping and Normalization Processing
+	// ==========================================
+
+	private static Map<String, String> convertRowToNormalizedMap(List<String> rawHeaders, Map<String, String> row) {
+		Map<String, String> map = new LinkedHashMap<>();
+		for (String rawHeader : rawHeaders) {
+			String cleanName = cleanHeaderName(rawHeader);
+			if (XssfExcelRowProcessor.LOGICAL_ID_HEADER.equalsIgnoreCase(cleanName) || isSystemMember(cleanName)) {
+				continue;
+			}
+			String val = row.getOrDefault(rawHeader, "");
+			map.put(cleanName, normalizeStringValue(val));
+		}
+		return map;
+	}
+
+	private static Map<String, String> convertObjectToNormalizedMap(
+			IContext context, List<String> rawHeaders, IMendixObject obj, IdentityResolver identityResolver) {
+		Map<String, String> map = new LinkedHashMap<>();
+		for (String rawHeader : rawHeaders) {
+			String cleanName = cleanHeaderName(rawHeader);
+			if (XssfExcelRowProcessor.LOGICAL_ID_HEADER.equalsIgnoreCase(cleanName) || isSystemMember(cleanName)) {
+				continue;
+			}
+			String valStr = getObjectValueAsString(context, obj, cleanName, identityResolver);
+			map.put(cleanName, normalizeStringValue(valStr));
+		}
+		return map;
+	}
 
 	/**
 	* Extract RowKey from Expected (Excel row)
@@ -205,40 +284,8 @@ public class DataSetAssertor {
 				|| "changedBy".equalsIgnoreCase(headerName);
 	}
 
-	private static String formatExpectedRowToString(List<String> rawHeaders, Map<String, String> row) {
-		StringBuilder sb = new StringBuilder();
-		for (String rawHeader : rawHeaders) {
-			String cleanName = cleanHeaderName(rawHeader);
-			if (XssfExcelRowProcessor.LOGICAL_ID_HEADER.equalsIgnoreCase(cleanName) || isSystemMember(cleanName)) {
-				continue;
-			}
-			if (sb.length() > 0)
-				sb.append(", ");
-			sb.append(cleanName).append("=").append(normalizeStringValue(row.getOrDefault(rawHeader, "")));
-		}
-		return sb.toString();
-	}
-
-	private static String formatActualObjectToString(
-			IContext context, List<String> rawHeaders, IMendixObject obj, IdentityResolver identityResolver) {
-		StringBuilder sb = new StringBuilder();
-		for (String rawHeader : rawHeaders) {
-			String cleanName = cleanHeaderName(rawHeader);
-			if (XssfExcelRowProcessor.LOGICAL_ID_HEADER.equalsIgnoreCase(cleanName) || isSystemMember(cleanName)) {
-				continue;
-			}
-			if (sb.length() > 0)
-				sb.append(", ");
-
-			String valStr = getObjectValueAsString(context, obj, cleanName, identityResolver);
-			sb.append(cleanName).append("=").append(valStr != null ? valStr : "");
-		}
-		return sb.toString();
-	}
-
 	private static String getObjectValueAsString(
 			IContext context, IMendixObject obj, String cleanHeaderName, IdentityResolver identityResolver) {
-
 		IMetaPrimitive primitive = obj.getMetaObject().getMetaPrimitive(cleanHeaderName);
 		if (primitive != null) {
 			Object val = obj.getValue(context, cleanHeaderName);

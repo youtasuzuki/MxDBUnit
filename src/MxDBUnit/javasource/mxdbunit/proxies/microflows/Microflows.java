@@ -55,4 +55,14 @@ public final class Microflows
 	{
 		uT_Sample2_2Builder().execute(context);
 	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_Sample3Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MxDBUnit.UT_Sample3");
+		return builder;
+	}
+
+	public static void uT_Sample3(IContext context)
+	{
+		uT_Sample3Builder().execute(context);
+	}
 }

@@ -17,6 +17,7 @@ import mxdbunit.implementation.TimeZoneResolver;
 
 /**
  * Entities for which preparation data exists in Excel are loaded in bulk and registered in the database.
+ * It is also possible to execute this action for each Excel file in order to read data from multiple Excel files within a single test case.
  */
 public class LoadAllFromExcel extends UserAction<java.lang.Void>
 {
