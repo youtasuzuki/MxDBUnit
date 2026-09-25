@@ -46,4 +46,54 @@ public final class Microflows
 		Object result = aSU_StartupBuilder().execute(context);
 		return (boolean) result;
 	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder tearDownBuilder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.TearDown");
+		return builder;
+	}
+
+	public static void tearDown(IContext context)
+	{
+		tearDownBuilder().execute(context);
+	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_ExtSample1Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.UT_ExtSample1");
+		return builder;
+	}
+
+	public static void uT_ExtSample1(IContext context)
+	{
+		uT_ExtSample1Builder().execute(context);
+	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_ExtSample1_2Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.UT_ExtSample1_2");
+		return builder;
+	}
+
+	public static void uT_ExtSample1_2(IContext context)
+	{
+		uT_ExtSample1_2Builder().execute(context);
+	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_ExtSample1_3Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.UT_ExtSample1_3");
+		return builder;
+	}
+
+	public static void uT_ExtSample1_3(IContext context)
+	{
+		uT_ExtSample1_3Builder().execute(context);
+	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_ExtSample2Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.UT_ExtSample2");
+		return builder;
+	}
+
+	public static void uT_ExtSample2(IContext context)
+	{
+		uT_ExtSample2Builder().execute(context);
+	}
 }

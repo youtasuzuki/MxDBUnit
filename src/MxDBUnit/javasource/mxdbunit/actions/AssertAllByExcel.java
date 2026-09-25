@@ -16,6 +16,7 @@ import mxdbunit.implementation.IdentityResolver;
 /**
  * Perform a batch assertion for entities that have a corresponding "expected results" sheet in the Excel file.
  * All records of the target entity are retrieved as the actual result. Therefore, you must execute `LoadAllFromExcel` with `doClean=true` to clear out any unnecessary data.
+ * Sheets with names that do not match the persistent entity name will be skipped, and a warning will be issued.
  */
 public class AssertAllByExcel extends UserAction<java.lang.Void>
 {

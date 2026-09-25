@@ -7,10 +7,13 @@ import java.util.List;
 import java.util.Map;
 
 import com.mendix.core.Core;
+import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
+import com.mendix.systemwideinterfaces.core.meta.IMetaObject;
 
 public class ExcelDataAssertor {
+	public static final ILogNode logger = Core.getLogger("MxDBUnit");
 
 	/**
 	* It reads all sheets in the Excel file in a batch and validates them against actual data (DB). 
@@ -28,13 +31,28 @@ public class ExcelDataAssertor {
 		List<String> sheetOrder = new ArrayList<>(); // Preserve sheet appearance order
 
 		// ----------------------------------------------------
-		// Phase 1: XssfExcelReader で = シートのみを収集
+		// Phase 1: Collect only sheets using XssfExcelReader
 		// ----------------------------------------------------
 		XssfExcelReader.readAllSheets(
 				excelFile,
 				// 1. SheetFilter: Applies only to sheets starting with =
 				sheetName -> {
 					if (sheetName.startsWith("=")) {
+						if (!ExcelDataLoader.isExternal(sheetName)) {
+							String entityName = EntityResolver.resolve(sheetName.substring(1));
+							if (entityName == null) {
+								logger.warn("[MxDBUnit] assertAll skips sheetName \"" + sheetName
+										+ "\" that is not entity name.");
+								return false;
+							}
+							IMetaObject mo = Core.getMetaObject(entityName);
+							if (!mo.isPersistable()) {
+								logger.warn("[MxDBUnit] assertAll skips sheetName \"" + sheetName
+										+ "\" that is no-persistent entity name.");
+								return false;
+							}
+						}
+
 						sheetOrder.add(sheetName);
 						expectedSheetsData.put(sheetName, new ArrayList<>());
 						return true;
@@ -77,33 +95,45 @@ public class ExcelDataAssertor {
 				continue;
 			}
 
-			// Automatically resolve "=Customer" to "SalesModule.Customer" using EntityResolver
-			String targetEntityLocalName = expectedSheetName.replace("=", "");
-			String targetEntityType = EntityResolver.resolve(targetEntityLocalName);
+			// Get the pure target name with the leading "=" removed (e.g., "DSName:TableName" or "Customer").
+			String targetLocalName = expectedSheetName.substring(1);
 
-			if (targetEntityType == null) {
-				aggregatedErrors.append("\n[MxDBUnit Error] Could not resolve entity for sheet: ")
-						.append(expectedSheetName).append("\n");
-				failureCount++;
-				continue;
-			}
-
-			// Retrieve all actual data records from the database.
-			List<IMendixObject> actualObjects = Core.createXPathQuery("//" + targetEntityType)
-					.execute(context);
-
-			// Executing Verification (DataSetAssertor)
 			try {
-				DataSetAssertor.compareTable(
-						context,
-						expectedSheetName,
-						expectedRows,
-						actualObjects,
-						identityResolver);
+				if (ExcelDataLoader.isExternal(targetLocalName)) {
+					String[] parts = targetLocalName.split(ExcelDataLoader.DS_SEP_REGEXP, 2);
+					String dsName = parts[0];
+					String tableName = parts[1];
+					// Retrieve via JDBC & merge into DataSetAssertor.compareMaps
+					AssertExtByExcel.assertTable(context, expectedSheetName, dsName, tableName, expectedRows);
+
+				} else {
+					String targetEntityType = EntityResolver.resolve(targetLocalName);
+					if (targetEntityType == null) {
+						aggregatedErrors.append("\n[MxDBUnit Error] Could not resolve entity for sheet: ")
+								.append(expectedSheetName).append("\n");
+						failureCount++;
+						continue;
+					}
+					// Retrieve all actual data records from the Mendix database.
+					List<IMendixObject> actualObjects = Core.createXPathQuery("//" + targetEntityType)
+							.execute(context);
+					// Merge Assert Execution for Mendix & DataSetAssertor.compareMaps
+					AssertMendixByExcel.assertTable(
+							context,
+							expectedSheetName,
+							expectedRows,
+							actualObjects,
+							identityResolver);
+				}
 			} catch (AssertionError e) {
 				// Catch individual sheet errors and append them to the report.
 				failureCount++;
 				aggregatedErrors.append(e.getMessage()).append("\n");
+			} catch (Exception e) {
+				failureCount++;
+				aggregatedErrors.append("\n[MxDBUnit Exception] Error processing sheet ")
+						.append(expectedSheetName).append(": ").append(e.getMessage()).append("\n");
+				logger.error("[MxDBUnit Exception] Error processing sheet:" + expectedSheetName, e);
 			}
 		}
 

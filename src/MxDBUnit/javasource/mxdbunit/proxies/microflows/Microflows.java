@@ -25,6 +25,26 @@ public final class Microflows
 	{
 		aCT_DoSumSample1Builder().execute(context);
 	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder tearDownBuilder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MxDBUnit.TearDown");
+		return builder;
+	}
+
+	public static void tearDown(IContext context)
+	{
+		tearDownBuilder().execute(context);
+	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_ExtDB_Sample1Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MxDBUnit.UT_ExtDB_Sample1");
+		return builder;
+	}
+
+	public static void uT_ExtDB_Sample1(IContext context)
+	{
+		uT_ExtDB_Sample1Builder().execute(context);
+	}
 	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_Sample1Builder()
 	{
 		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MxDBUnit.UT_Sample1");

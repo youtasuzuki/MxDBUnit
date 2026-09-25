@@ -17,7 +17,7 @@ import java.util.Map;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.UserAction;
-import mxdbunit.implementation.DataSetAssertor;
+import mxdbunit.implementation.AssertMendixByExcel;
 import mxdbunit.implementation.ExcelDataLoader;
 import mxdbunit.implementation.IdentityResolver;
 import mxdbunit.implementation.XssfExcelReader;
@@ -102,7 +102,7 @@ public class AssertListByExcel extends UserAction<java.lang.Void>
 		}
 
 		// 2. Calling the common core logic (DataSetAssertor)
-		DataSetAssertor.compareTable(
+		AssertMendixByExcel.assertTable(
 				this.getContext(),
 				targetSheetName,
 				expectedRows,
