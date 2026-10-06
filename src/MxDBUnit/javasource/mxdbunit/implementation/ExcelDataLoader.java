@@ -181,7 +181,7 @@ public class ExcelDataLoader {
 			// Execute DELETE using a connection within the same transaction space.
 			Connection conn = ExtDbBridge.getTestConnection(context, dsName);
 			try (Statement stmt = conn.createStatement()) {
-				stmt.executeUpdate("DELETE FROM " + tableName);
+				stmt.executeUpdate("DELETE FROM \"" + tableName + "\"");
 				logger.info("Cleaned external table [" + dsName + ":" + tableName + "] via DELETE FROM");
 			}
 			deletedExtTables.add(target);
@@ -242,7 +242,7 @@ public class ExcelDataLoader {
 						throw new RuntimeException("Failed to get metadata for table: " + tableName, e);
 					}
 				});
-		StringBuilder sql = new StringBuilder("INSERT INTO ").append(tableName).append(" (");
+		StringBuilder sql = new StringBuilder("INSERT INTO \"").append(tableName).append("\" (");
 		StringBuilder placeholders = new StringBuilder();
 
 		for (int i = 0; i < columns.size(); i++) {
@@ -250,7 +250,7 @@ public class ExcelDataLoader {
 				sql.append(", ");
 				placeholders.append(", ");
 			}
-			sql.append(columns.get(i));
+			sql.append("\"").append(columns.get(i)).append("\"");
 			placeholders.append("?");
 		}
 		sql.append(") VALUES (").append(placeholders).append(")");
@@ -262,13 +262,21 @@ public class ExcelDataLoader {
 				String val = getValueFromRowData(formattedRow, colName);
 				int sqlType = columnTypes.getOrDefault(colName.toUpperCase(), java.sql.Types.VARCHAR);
 
-				if (val == null || val.trim().isEmpty()) {
-					ps.setNull(i + 1, sqlType);
-					params.add(null);
-				} else {
-					Object convertedVal = parseValueBySqlType(val, sqlType, context);
-					ps.setObject(i + 1, convertedVal, sqlType);
-					params.add(convertedVal);
+				try {
+					if (val == null || val.trim().isEmpty()) {
+						ps.setNull(i + 1, sqlType);
+						params.add(null);
+					} else {
+						Object convertedVal = parseValueBySqlType(val, sqlType, context);
+						ps.setObject(i + 1, convertedVal, sqlType);
+						params.add(convertedVal);
+					}
+				} catch (Exception e) {
+					throw new MendixRuntimeException(
+							String.format(
+									"[MxDBUnit] Failed to parse value for column '%s' (Table: '%s', Type Code: %d, Raw Value: '%s')",
+									colName, tableName, sqlType, val),
+							e);
 				}
 			}
 			ps.executeUpdate();
@@ -301,7 +309,7 @@ public class ExcelDataLoader {
 	private static Map<String, Integer> getColumnTypes(Connection conn, String tableName) throws Exception {
 		Map<String, Integer> typeMap = new HashMap<>();
 		// Retrieve only metadata with an empty search
-		String query = "SELECT * FROM " + tableName + " WHERE 1 = 0";
+		String query = "SELECT * FROM \"" + tableName + "\" WHERE 1 = 0";
 		try (PreparedStatement ps = conn.prepareStatement(query);
 				java.sql.ResultSet rs = ps.executeQuery()) {
 			java.sql.ResultSetMetaData meta = rs.getMetaData();

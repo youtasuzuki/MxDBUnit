@@ -78,9 +78,9 @@ public class AssertExtByExcel {
 		for (int i = 0; i < cleanColumns.size(); i++) {
 			if (i > 0)
 				sql.append(", ");
-			sql.append(cleanColumns.get(i));
+			sql.append("\"").append(cleanColumns.get(i)).append("\"");
 		}
-		sql.append(" FROM ").append(tableName);
+		sql.append(" FROM \"").append(tableName).append("\"");
 
 		Map<String, Map<String, String>> actualKeyToMap = new LinkedHashMap<>();
 

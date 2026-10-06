@@ -6,8 +6,8 @@ package mxdbunit.proxies;
 
 public enum EnumForSample
 {
-	Red("5ce953e8-f05f-4c32-ae48-fff204ccb0ca"),
-	Green("b1146e5e-47a8-4a06-99ac-f4020382e828");
+	Red("249f8b69-f89d-4e0b-b60a-3f96d9792f53"),
+	Green("dc3386bc-d40e-4542-aa6d-78faa6e467f7");
 
 	private final java.lang.String i18nCaptionKey;
 	
