@@ -386,7 +386,7 @@ public class ExcelDataLoader {
 		String resourcesPath = Core.getConfiguration().getResourcesPath() != null
 				? Core.getConfiguration().getResourcesPath().getAbsolutePath()
 				: "";
-		String converted = path.replace("$MXDBUNIT", mxdbunitEnv)
+		String converted = path.replace("\\", "/").replace("$MXDBUNIT", mxdbunitEnv)
 				.replace("$HOME", homeDir)
 				.replace("$RESOURCES", resourcesPath);
 		logger.debug("Converted excelFilePath from '" + path + "' to '" + converted + "'");
