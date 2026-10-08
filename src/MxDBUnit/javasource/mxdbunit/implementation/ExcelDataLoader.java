@@ -59,6 +59,7 @@ public class ExcelDataLoader {
 
 		String replacedFilePath = convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
+		loadAliases(context, excelFile);
 		if (doClean) {
 			cleanTargetEntities(context, excelFile);
 			cleanExternalTables(context, excelFile);
@@ -113,12 +114,19 @@ public class ExcelDataLoader {
 						isExternalDb[0] = true;
 						String[] parts = sheetName.split(DS_SEP_REGEXP, 2);
 						currentDsName[0] = parts[0];
-						currentTableName[0] = parts[1];
+						currentTableName[0] = resolveAlias(context, parts[1]);
 						return true;
 					} else {
 						isExternalDb[0] = false;
-						currentEntityType[0] = resolveEntityType(sheetName);
-						return currentEntityType[0] != null;
+						String originalEntityName = resolveAlias(context, sheetName);
+						currentEntityType[0] = resolveEntityType(originalEntityName);
+						if (currentEntityType[0] == null) {
+							throw new MendixRuntimeException(
+									"[MxDBUnit Error] Could not resolve Mendix Entity for sheet: '" + sheetName +
+											"' (Resolved Name: '" + originalEntityName
+											+ "'). Please check entity existence or #Alias definition.");
+						}
+						return true;
 					}
 				},
 				rowProcessor);
@@ -140,7 +148,7 @@ public class ExcelDataLoader {
 			deletedEntities = new HashSet<>();
 			context.getData().put("DeletedEntities", deletedEntities);
 		}
-		List<String> targetEntities = getTargetEntitiesInOrder(excelFile);
+		List<String> targetEntities = getTargetEntitiesInOrder(context, excelFile);
 		// Perform deletion in reverse order (child to parent), taking dependencies into account.
 		Collections.reverse(targetEntities);
 		for (String entityType : targetEntities) {
@@ -177,18 +185,21 @@ public class ExcelDataLoader {
 			}
 			String[] parts = target.split(DS_SEP_REGEXP, 2);
 			String dsName = parts[0];
-			String tableName = parts[1];
+			String aliasTableName = parts[1];
+
+			// A1 If an override exists, prioritize it; otherwise, use the table name derived from the sheet name.
+			String originalTableName = resolveAlias(context, aliasTableName);
 			// Execute DELETE using a connection within the same transaction space.
 			Connection conn = ExtDbBridge.getTestConnection(context, dsName);
 			try (Statement stmt = conn.createStatement()) {
-				stmt.executeUpdate("DELETE FROM \"" + tableName + "\"");
-				logger.info("Cleaned external table [" + dsName + ":" + tableName + "] via DELETE FROM");
+				stmt.executeUpdate("DELETE FROM \"" + originalTableName + "\"");
+				logger.info("Cleaned external table [" + dsName + ":" + originalTableName + "] via DELETE FROM");
 			}
 			deletedExtTables.add(target);
 		}
 	}
 
-	private static List<String> getTargetEntitiesInOrder(File excelFile) throws Exception {
+	private static List<String> getTargetEntitiesInOrder(IContext context, File excelFile) throws Exception {
 		List<String> entities = new ArrayList<>();
 		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
 			XSSFReader reader = new XSSFReader(pkg);
@@ -198,8 +209,9 @@ public class ExcelDataLoader {
 				String rawSheetName = sheets.getSheetName();
 				// Include assertion sheets in the items to be deleted.
 				String sheetName = rawSheetName.startsWith("=") ? rawSheetName.substring(1) : rawSheetName;
-				if (!isExternal(sheetName)) {
-					String entityType = EntityResolver.resolve(sheetName);
+				if (!isExternal(sheetName) && isTargetSheet(sheetName)) {
+					String originalEntityName = resolveAlias(context, sheetName);
+					String entityType = EntityResolver.resolve(originalEntityName);
 					if (entityType != null && !entities.contains(entityType)) {
 						entities.add(entityType);
 					}
@@ -380,4 +392,59 @@ public class ExcelDataLoader {
 		logger.debug("Converted excelFilePath from '" + path + "' to '" + converted + "'");
 		return converted;
 	}
+
+	// Scan the '#Alias' sheet in Excel and store it in a conversion map.
+	public static Map<String, String> loadAliases(IContext context, File excelFile) throws Exception {
+		// Perform the check while retaining the file path and cache key of the last loaded file.
+		String currentPath = excelFile.getAbsolutePath();
+		String lastLoadedPath = (String) context.getData().get("NameAliases_LoadedPath");
+		Map<String, String> aliasMap = (Map<String, String>) context.getData().get("NameAliases");
+
+		// Returns the cache if it is the same file and has already been loaded.
+		if (aliasMap != null && currentPath.equals(lastLoadedPath)) {
+			return aliasMap;
+		}
+		aliasMap = new HashMap<>();
+		final Map<String, String> finalAliasMap = aliasMap;
+		XssfExcelReader.readAllSheets(
+				excelFile,
+				sheetName -> "#Alias".equalsIgnoreCase(sheetName),
+				new XssfExcelRowProcessor() {
+					@Override
+					public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
+						if (rowIndex == 1) {
+							setupColumnNameMap(rowData);
+							return;
+						}
+						String shortName = getValueFromRowData(rowData, "AliasName");
+						String originalName = getValueFromRowData(rowData, "OriginalName");
+						if (shortName == null || shortName.trim().isEmpty()) {
+							// Type relief measure
+							shortName = rowData.get("A");
+							originalName = rowData.get("B");
+						}
+						if (shortName != null && originalName != null && !shortName.trim().isEmpty()) {
+							finalAliasMap.put(shortName.trim(), originalName.trim());
+						}
+					}
+				});
+
+		// Save the result and the loaded file path to the context.
+		context.getData().put("NameAliases", aliasMap);
+		context.getData().put("NameAliases_LoadedPath", currentPath);
+		return aliasMap;
+	}
+
+	// Short name -> Common method to resolve the original name
+	public static String resolveAlias(IContext context, String aliasName) {
+		if (aliasName == null) {
+			return null;
+		}
+		Map<String, String> aliasMap = (Map<String, String>) context.getData().get("NameAliases");
+		if (aliasMap != null && aliasMap.containsKey(aliasName.trim())) {
+			return aliasMap.get(aliasName.trim());
+		}
+		return aliasName;
+	}
+
 }

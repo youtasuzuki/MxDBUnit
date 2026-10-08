@@ -8,6 +8,7 @@ import java.util.Map;
 
 import com.mendix.core.Core;
 import com.mendix.logging.ILogNode;
+import com.mendix.systemwideinterfaces.MendixRuntimeException;
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.IMendixObject;
 import com.mendix.systemwideinterfaces.core.meta.IMetaObject;
@@ -24,6 +25,7 @@ public class ExcelDataAssertor {
 
 		String replacedFilePath = ExcelDataLoader.convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
+		ExcelDataLoader.loadAliases(context, excelFile);
 
 		// A map holding the row data (including headers) for each sheet.
 		// SheetName -> List<RowDataMap>
@@ -39,11 +41,14 @@ public class ExcelDataAssertor {
 				sheetName -> {
 					if (sheetName.startsWith("=")) {
 						if (!ExcelDataLoader.isExternal(sheetName)) {
-							String entityName = EntityResolver.resolve(sheetName.substring(1));
+							String rawTargetName = sheetName.substring(1);
+							String originalName = ExcelDataLoader.resolveAlias(context, rawTargetName);
+							String entityName = EntityResolver.resolve(originalName);
 							if (entityName == null) {
-								logger.warn("[MxDBUnit] assertAll skips sheetName \"" + sheetName
-										+ "\" that is not entity name.");
-								return false;
+								throw new MendixRuntimeException(
+										"[MxDBUnit Error] assertAll failed to resolve entity for sheet '" + sheetName +
+												"' (Resolved OriginalName: '" + originalName
+												+ "'). Please check #Alias definition.");
 							}
 							IMetaObject mo = Core.getMetaObject(entityName);
 							if (!mo.isPersistable()) {
@@ -102,12 +107,14 @@ public class ExcelDataAssertor {
 				if (ExcelDataLoader.isExternal(targetLocalName)) {
 					String[] parts = targetLocalName.split(ExcelDataLoader.DS_SEP_REGEXP, 2);
 					String dsName = parts[0];
-					String tableName = parts[1];
+					String aliasTableName = parts[1];
+					// Resolved physical table name (prioritizes the A1 override if present; otherwise, uses the default)
+					String originalTableName = ExcelDataLoader.resolveAlias(context, aliasTableName);
 					// Retrieve via JDBC & merge into DataSetAssertor.compareMaps
-					AssertExtByExcel.assertTable(context, expectedSheetName, dsName, tableName, expectedRows);
-
+					AssertExtByExcel.assertTable(context, expectedSheetName, dsName, originalTableName, expectedRows);
 				} else {
-					String targetEntityType = EntityResolver.resolve(targetLocalName);
+					String originalEntityName = ExcelDataLoader.resolveAlias(context, targetLocalName);
+					String targetEntityType = EntityResolver.resolve(originalEntityName);
 					if (targetEntityType == null) {
 						aggregatedErrors.append("\n[MxDBUnit Error] Could not resolve entity for sheet: ")
 								.append(expectedSheetName).append("\n");

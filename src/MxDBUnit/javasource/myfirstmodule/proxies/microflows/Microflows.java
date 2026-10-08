@@ -96,4 +96,14 @@ public final class Microflows
 	{
 		uT_ExtSample2Builder().execute(context);
 	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder uT_IntSample1Builder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.UT_IntSample1");
+		return builder;
+	}
+
+	public static void uT_IntSample1(IContext context)
+	{
+		uT_IntSample1Builder().execute(context);
+	}
 }
