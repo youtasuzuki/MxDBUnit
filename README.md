@@ -32,10 +32,11 @@ For applications using TwoWaySQL (v2.7.0 or later), you can insert test data int
 - Unlike internal DBs, the "Id" column holds no special significance for external DBs. Therefore, you must include an "*" in the column name of the key column within the expected results sheet. If a key column is not specified, assertions will not be performed correctly.
 - A single test can handle both internal and external databases.
 - When testing an external DB, you must create a "TearDown" Microflow in the module containing the test case's Microflow and call the "TearDownMxDBUnit" action. This is a mandatory requirement to prevent deadlocks.
+### Additional rules for handling long table/entity name:
+- If table names or entity names are too long to fit into Excel sheet names, you can resolve this by using the "#Alias" sheet.
+- For details, please refer to the sample "#Alias" sheet.
 
 # Restrictions
-### Currently, entity names of 30 characters or fewer are supported.  
-There are plans to improve this using an alias definition sheet.
 ### Many-to-many associations are not supported.  
 There are currently no plans to support them.
 ### Currently, only Excel format is supported for test data.  
