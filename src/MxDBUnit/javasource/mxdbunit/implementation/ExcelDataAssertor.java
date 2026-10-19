@@ -20,7 +20,8 @@ public class ExcelDataAssertor {
 	* It reads all sheets in the Excel file in a batch and validates them against actual data (DB). 
 	* It does not stop if an error occurs in an intermediate sheet; instead, it aggregates and reports all errors after validating every sheet.
 	*/
-	public static void assertAll(IContext context, String excelFilePath, IdentityResolver identityResolver)
+	public static void assertAll(IContext context, String excelFilePath, IdentityResolver identityResolver,
+			String subCaseId)
 			throws Exception {
 
 		String replacedFilePath = ExcelDataLoader.convertPath(excelFilePath);
@@ -74,8 +75,17 @@ public class ExcelDataAssertor {
 						if (activeSheetName == null || rowIndex == 1) {
 							activeSheetName = sheetOrder.get(sheetOrder.size() - 1);
 							setupColumnNameMap(rowData);
+							// Create a map of the header row (index 0) for DataSetAssertor, and add it after removing the SubCaseId.
+							Map<String, String> headerRow = new HashMap<>();
+							for (Map.Entry<String, String> entry : rowData.entrySet()) {
+								String header = getHeaderName(entry.getKey());
+								if (header != null && !ExcelDataLoader.SUB_TEST_CASE_HEADER.equalsIgnoreCase(header)) {
+									headerRow.put(header, header);
+								}
+							}
+							expectedSheetsData.get(activeSheetName).add(headerRow); // Register at index 0
+							return;
 						}
-
 						// Creating a RowMap with keys replaced by header names
 						Map<String, String> formattedRow = new HashMap<>();
 						for (Map.Entry<String, String> entry : rowData.entrySet()) {
@@ -83,6 +93,10 @@ public class ExcelDataAssertor {
 							if (header != null) {
 								formattedRow.put(header, entry.getValue());
 							}
+						}
+						// Row filtering by SubCase ID
+						if (!ExcelDataLoader.shouldProcessRow(subCaseId, formattedRow, activeSheetName)) {
+							return;
 						}
 						expectedSheetsData.get(activeSheetName).add(formattedRow);
 					}
@@ -151,6 +165,10 @@ public class ExcelDataAssertor {
 			StringBuilder finalReport = new StringBuilder();
 			finalReport.append("\n==================================================");
 			finalReport.append("\n[MxDBUnit] Total Failures Detected: ").append(failureCount).append(" Sheet(s)");
+			// If a SubCase ID is specified, state it clearly in the header.
+			if (subCaseId != null && !subCaseId.trim().isEmpty()) {
+				finalReport.append(" [SubCaseId: ").append(subCaseId.trim()).append("]");
+			}
 			finalReport.append("\n==================================================");
 			finalReport.append(aggregatedErrors);
 

@@ -35,6 +35,10 @@ public abstract class XssfExcelRowProcessor implements XssfExcelReader.RowProces
 		return columnToHeader.get(column);
 	}
 
+	protected String getColumnName(String headerName) {
+		return headerToColumn.get(headerName);
+	}
+
 	protected String getValueByHeader(Map<String, String> rowData, String headerName) {
 		return rowData.get(headerToColumn.get(headerName));
 	}

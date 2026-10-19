@@ -21,14 +21,17 @@ import mxdbunit.implementation.IdentityResolver;
 public class AssertAllByExcel extends UserAction<java.lang.Void>
 {
 	private final java.lang.String excelFilePath;
+	private final java.lang.String subCaseId;
 
 	public AssertAllByExcel(
 		IContext context,
-		java.lang.String _excelFilePath
+		java.lang.String _excelFilePath,
+		java.lang.String _subCaseId
 	)
 	{
 		super(context);
 		this.excelFilePath = _excelFilePath;
+		this.subCaseId = _subCaseId;
 	}
 
 	@java.lang.Override
@@ -43,7 +46,7 @@ public class AssertAllByExcel extends UserAction<java.lang.Void>
 		if (targetExcelFilePath == null) {
 			throw new com.mendix.systemwideinterfaces.MendixRuntimeException("Excel file path is not provided and no previous Excel file path found in context.");
 		}
-		mxdbunit.implementation.ExcelDataAssertor.assertAll(getContext(), targetExcelFilePath, identityResolver);
+		mxdbunit.implementation.ExcelDataAssertor.assertAll(getContext(), targetExcelFilePath, identityResolver, subCaseId);
 		return null;
 		// END USER CODE
 	}

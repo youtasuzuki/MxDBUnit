@@ -72,6 +72,9 @@ public class FileDocument implements com.mendix.systemwideinterfaces.core.IEntit
 	 */
 	public static system.proxies.FileDocument initialize(com.mendix.systemwideinterfaces.core.IContext context, com.mendix.systemwideinterfaces.core.IMendixObject mendixObject)
 	{
+		if (mendixObject.isInstanceOf("NanoProfiler.FileForDownload")) {
+			return nanoprofiler.proxies.FileForDownload.initialize(context, mendixObject);
+		}
 		if (mendixObject.isInstanceOf("System.Image")) {
 			return system.proxies.Image.initialize(context, mendixObject);
 		}

@@ -22,16 +22,19 @@ import mxdbunit.implementation.TimeZoneResolver;
 public class LoadAllFromExcel extends UserAction<java.lang.Void>
 {
 	private final java.lang.String excelFilePath;
+	private final java.lang.String subCaseId;
 	private final java.lang.Boolean doClean;
 
 	public LoadAllFromExcel(
 		IContext context,
 		java.lang.String _excelFilePath,
+		java.lang.String _subCaseId,
 		java.lang.Boolean _doClean
 	)
 	{
 		super(context);
 		this.excelFilePath = _excelFilePath;
+		this.subCaseId = _subCaseId;
 		this.doClean = _doClean;
 	}
 
@@ -44,7 +47,7 @@ public class LoadAllFromExcel extends UserAction<java.lang.Void>
 			identityResolver = new IdentityResolver();
 			getContext().getData().put("IdentityResolver", identityResolver);
 		}
-		ExcelDataLoader.loadAll(getContext(), excelFilePath, TimeZoneResolver.getTimeZone(getContext()).toZoneId().getId(), identityResolver, doClean);
+		ExcelDataLoader.loadAll(getContext(), excelFilePath, TimeZoneResolver.getTimeZone(getContext()).toZoneId().getId(), identityResolver, doClean, subCaseId);
 		getContext().getData().put("LastExcelFilePath", excelFilePath);
 		return null;
 		// END USER CODE

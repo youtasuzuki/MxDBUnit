@@ -29,18 +29,21 @@ import mxdbunit.implementation.XssfExcelRowProcessor;
 public class AssertListByExcel extends UserAction<java.lang.Void>
 {
 	private final java.lang.String excelFilePath;
+	private final java.lang.String subCaseId;
 	private final java.lang.String expectedSheetName;
 	private final java.util.List<IMendixObject> actualList;
 
 	public AssertListByExcel(
 		IContext context,
 		java.lang.String _excelFilePath,
+		java.lang.String _subCaseId,
 		java.lang.String _expectedSheetName,
 		java.util.List<IMendixObject> _actualList
 	)
 	{
 		super(context);
 		this.excelFilePath = _excelFilePath;
+		this.subCaseId = _subCaseId;
 		this.expectedSheetName = _expectedSheetName;
 		this.actualList = _actualList;
 	}
@@ -82,14 +85,26 @@ public class AssertListByExcel extends UserAction<java.lang.Void>
 					public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
 						if (rowIndex == 1) {
 							setupColumnNameMap(rowData);
+							// Create a map of the header row (index 0) for `DataSetAssertor`, and add it after removing `SubCaseId`.
+							Map<String, String> headerRow = new HashMap<>();
+							for (Map.Entry<String, String> entry : rowData.entrySet()) {
+								String header = getHeaderName(entry.getKey());
+								if (header != null && !ExcelDataLoader.SUB_TEST_CASE_HEADER.equalsIgnoreCase(header)) {
+									headerRow.put(header, header);
+								}
+							}
+							expectedRows.add(headerRow); // Register it at index 0.
+							return;
 						}
-
 						Map<String, String> formattedRow = new HashMap<>();
 						for (Map.Entry<String, String> entry : rowData.entrySet()) {
 							String header = getHeaderName(entry.getKey());
 							if (header != null) {
 								formattedRow.put(header, entry.getValue());
 							}
+						}
+						if (!ExcelDataLoader.shouldProcessRow(subCaseId, formattedRow, targetSheetName)) {
+							return; // Skip rows that do not match the subCaseId
 						}
 						expectedRows.add(formattedRow);
 					}

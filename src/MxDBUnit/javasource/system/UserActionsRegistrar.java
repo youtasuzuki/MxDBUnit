@@ -111,6 +111,16 @@ public class UserActionsRegistrar
     registrator.registerUserAction(mxdbunit.actions.SetDefaultTimeZoneId.class);
     registrator.registerUserAction(mxdbunit.actions.SetExtDbRollbackMode.class);
     registrator.registerUserAction(mxdbunit.actions.TearDownMxDBUnit.class);
+    registrator.registerUserAction(nanoprofiler.actions.LogNanoProfileAsDebug.class);
+    registrator.registerUserAction(nanoprofiler.actions.LogNanoProfileAsInfo.class);
+    registrator.registerUserAction(nanoprofiler.actions.LogNanoProfileAsTrace.class);
+    registrator.registerUserAction(nanoprofiler.actions.RegisterAutoModeNanoProfiler.class);
+    registrator.registerUserAction(nanoprofiler.actions.ShutdownAutoModeNanoProfilers.class);
+    registrator.registerUserAction(nanoprofiler.actions.StartNanoProfiler.class);
+    registrator.registerUserAction(nanoprofiler.actions.StopNanoProfiler.class);
+    registrator.registerUserAction(nanoprofiler.actions.TestRegexMatch.class);
+    registrator.registerUserAction(nanoprofiler.actions.TestRegexMatchAsTarget.class);
+    registrator.registerUserAction(nanoprofiler.actions.TickNanoProfiler.class);
     registrator.registerUserAction(system.actions.VerifyPassword.class);
     registrator.registerUserAction(twowaysql.actions.AbendTranOnExternalDataSource.class);
     registrator.registerUserAction(twowaysql.actions.AddBooleanParameter.class);
