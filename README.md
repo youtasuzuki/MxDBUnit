@@ -27,6 +27,7 @@ For applications using TwoWaySQL (v2.7.0 or later), you can insert test data int
 - If you need to assert records added by the logic under test in an expected result sheet, append an "*" to the header column name(s) used to identify the record. You may specify multiple columns.  
 - Additionally, for records added by the logic under test, leave the "Id" column blank in the expected result sheet.
 - If the text following the "=" sign in the "Expected Results" sheet does not correspond to a persistent entity, the **AssertAllByExcel** action skips that sheet while issuing a warning. In contrast, the **AssertListByExcel** action performs the assertion as long as the sheet name matches, even if it is not an entity name.
+- You can add a "SubCaseId" column to specify sub-test case IDs. When using `LoadAllFromExcel`, `AssertAllByExcel`, or `AssertListByExcel`, the loader will filter out any rows that do not either match the specified `SubCaseId` value or contain  '*'  in that column.
 ### Additional rules for external DB testing:
 - For external DB tests, name the preparation sheet using the format "TwoWaySQL module's external data source name|table name" (e.g., "EXTDS|EMPLOYEE"). For the expected results sheet, prefix that name with "=".
 - Unlike internal DBs, the "Id" column holds no special significance for external DBs. Therefore, you must include an "*" in the column name of the key column within the expected results sheet. If a key column is not specified, assertions will not be performed correctly.
