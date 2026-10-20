@@ -1,6 +1,5 @@
 package mxdbunit.implementation;
 
-import java.io.File;
 import java.io.InputStream;
 import java.util.Map;
 
@@ -27,27 +26,25 @@ public class XssfExcelReader {
 		void processRow(int rowIndex, Map<String, String> rowData) throws Exception;;
 	}
 
-	public static void readAllSheets(File excelFile, SheetFilter sheetFilter, RowProcessor rowProcessor)
+	public static void readAllSheets(OPCPackage pkg, SheetFilter sheetFilter, RowProcessor rowProcessor)
 			throws Exception {
-		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
-			ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(pkg, false);
-			XSSFReader reader = new XSSFReader(pkg);
-			StylesTable styles = reader.getStylesTable();
-			XSSFReader.SheetIterator sheets = (XSSFReader.SheetIterator) reader.getSheetsData();
-			while (sheets.hasNext()) {
-				try (InputStream is = sheets.next()) {
-					String sheetName = sheets.getSheetName();
-					if (sheetFilter != null && !sheetFilter.test(sheetName)) {
-						continue;
-					}
-					DataFormatter formatter = new DataFormatter();
-					SheetContentsHandler handler = new InternalSheetHandler(rowProcessor);
-					XSSFSheetXMLHandler sheetHandler = new XSSFSheetXMLHandler(styles, null, strings, handler,
-							formatter, false);
-					XMLReader parser = XMLHelper.newXMLReader();
-					parser.setContentHandler(sheetHandler);
-					parser.parse(new org.xml.sax.InputSource(is));
+		ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(pkg, false);
+		XSSFReader reader = new XSSFReader(pkg);
+		StylesTable styles = reader.getStylesTable();
+		XSSFReader.SheetIterator sheets = (XSSFReader.SheetIterator) reader.getSheetsData();
+		while (sheets.hasNext()) {
+			try (InputStream is = sheets.next()) {
+				String sheetName = sheets.getSheetName();
+				if (sheetFilter != null && !sheetFilter.test(sheetName)) {
+					continue;
 				}
+				DataFormatter formatter = new DataFormatter();
+				SheetContentsHandler handler = new InternalSheetHandler(rowProcessor);
+				XSSFSheetXMLHandler sheetHandler = new XSSFSheetXMLHandler(styles, null, strings, handler,
+						formatter, false);
+				XMLReader parser = XMLHelper.newXMLReader();
+				parser.setContentHandler(sheetHandler);
+				parser.parse(new org.xml.sax.InputSource(is));
 			}
 		}
 	}

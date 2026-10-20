@@ -61,95 +61,98 @@ public class ExcelDataLoader {
 
 		String replacedFilePath = convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
-		loadAliases(context, excelFile);
-		if (doClean) {
-			cleanTargetEntities(context, excelFile);
-			cleanExternalTables(context, excelFile);
-		}
-
-		XssfExcelReader.RowProcessor rowProcessor = new XssfExcelRowProcessor() {
-			@Override
-			public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
-				if (rowIndex == 1) {
-					if (isExternalDb[0]) {
-						extColumnNames.clear();
-						for (String colVal : rowData.values()) {
-							if (!SUB_TEST_CASE_HEADER.equalsIgnoreCase(colVal)) {
-								extColumnNames.add(colVal);
-							}
-						}
-						setupColumnNameMap(rowData);
-					} else {
-						setupColumnNameMap(rowData);
-					}
-					return;
-				}
-				// Create a map that converts column identifiers (A, B...) into header names (*USER_ID, NAME...).
-				Map<String, String> formattedRow = new HashMap<>();
-				for (Map.Entry<String, String> entry : rowData.entrySet()) {
-					String header = getHeaderName(entry.getKey()); // Example: "A" -> "*USER_ID"
-					if (header != null) {
-						formattedRow.put(header, entry.getValue());
-					}
-				}
-				// Row filtering by SubCase ID (skipping non-matching rows)
-				if (!shouldProcessRow(subCaseId, formattedRow, currentSheetName[0])) {
-					return;
-				}
-				// Remove the SubCaseId column from rowData for createIMendixObject
-				String subCaseColKey = getColumnName(SUB_TEST_CASE_HEADER);
-				if (subCaseColKey != null) {
-					rowData.remove(subCaseColKey);
-				}
-				if (isExternalDb[0]) {
-					executeExtDbInsert(context, currentDsName[0], currentTableName[0], extColumnNames, formattedRow);
-				} else {
-					IMendixObject obj = createIMendixObject(
-							context, currentEntityType[0], rowData, timeZoneId, identityResolver, rowIndex);
-					if (!obj.getMetaObject().isPersistable()) {
-						// Add to the list of non-persistent entity object maps in the context.
-						npeMap.computeIfAbsent(currentEntityType[0], k -> new ArrayList<>()).add(obj);
-					}
-					commitBuffer.add(obj);
-					if (commitBuffer.size() >= 100) {
-						Core.commit(context, commitBuffer);
-						commitBuffer.clear();
-					}
-				}
+		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
+			loadAliases(context, pkg, excelFile.getAbsolutePath());
+			if (doClean) {
+				cleanTargetEntities(context, pkg);
+				cleanExternalTables(context, pkg);
 			}
-		};
-		XssfExcelReader.readAllSheets(
-				excelFile,
-				// Sheet Evaluation (SheetFilter)
-				sheetName -> {
-					if (!isTargetSheet(sheetName)) {
-						return false;
-					}
-					currentSheetName[0] = sheetName;
-					if (isExternal(sheetName)) {
-						isExternalDb[0] = true;
-						String[] parts = sheetName.split(DS_SEP_REGEXP, 2);
-						currentDsName[0] = parts[0];
-						currentTableName[0] = resolveAlias(context, parts[1]);
-						return true;
-					} else {
-						isExternalDb[0] = false;
-						String originalEntityName = resolveAlias(context, sheetName);
-						currentEntityType[0] = resolveEntityType(originalEntityName);
-						if (currentEntityType[0] == null) {
-							throw new MendixRuntimeException(
-									"[MxDBUnit Error] Could not resolve Mendix Entity for sheet: '" + sheetName +
-											"' (Resolved Name: '" + originalEntityName
-											+ "'). Please check entity existence or #Alias definition.");
-						}
-						return true;
-					}
-				},
-				rowProcessor);
 
-		if (!commitBuffer.isEmpty()) {
-			Core.commit(context, commitBuffer);
-			commitBuffer.clear();
+			XssfExcelReader.RowProcessor rowProcessor = new XssfExcelRowProcessor() {
+				@Override
+				public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
+					if (rowIndex == 1) {
+						if (isExternalDb[0]) {
+							extColumnNames.clear();
+							for (String colVal : rowData.values()) {
+								if (!SUB_TEST_CASE_HEADER.equalsIgnoreCase(colVal)) {
+									extColumnNames.add(colVal);
+								}
+							}
+							setupColumnNameMap(rowData);
+						} else {
+							setupColumnNameMap(rowData);
+						}
+						return;
+					}
+					// Create a map that converts column identifiers (A, B...) into header names (*USER_ID, NAME...).
+					Map<String, String> formattedRow = new HashMap<>();
+					for (Map.Entry<String, String> entry : rowData.entrySet()) {
+						String header = getHeaderName(entry.getKey()); // Example: "A" -> "*USER_ID"
+						if (header != null) {
+							formattedRow.put(header, entry.getValue());
+						}
+					}
+					// Row filtering by SubCase ID (skipping non-matching rows)
+					if (!shouldProcessRow(subCaseId, formattedRow, currentSheetName[0])) {
+						return;
+					}
+					// Remove the SubCaseId column from rowData for createIMendixObject
+					String subCaseColKey = getColumnName(SUB_TEST_CASE_HEADER);
+					if (subCaseColKey != null) {
+						rowData.remove(subCaseColKey);
+					}
+					if (isExternalDb[0]) {
+						executeExtDbInsert(context, currentDsName[0], currentTableName[0], extColumnNames,
+								formattedRow);
+					} else {
+						IMendixObject obj = createIMendixObject(
+								context, currentEntityType[0], rowData, timeZoneId, identityResolver, rowIndex);
+						if (!obj.getMetaObject().isPersistable()) {
+							// Add to the list of non-persistent entity object maps in the context.
+							npeMap.computeIfAbsent(currentEntityType[0], k -> new ArrayList<>()).add(obj);
+						}
+						commitBuffer.add(obj);
+						if (commitBuffer.size() >= 100) {
+							Core.commit(context, commitBuffer);
+							commitBuffer.clear();
+						}
+					}
+				}
+			};
+			XssfExcelReader.readAllSheets(
+					pkg,
+					// Sheet Evaluation (SheetFilter)
+					sheetName -> {
+						if (!isTargetSheet(sheetName)) {
+							return false;
+						}
+						currentSheetName[0] = sheetName;
+						if (isExternal(sheetName)) {
+							isExternalDb[0] = true;
+							String[] parts = sheetName.split(DS_SEP_REGEXP, 2);
+							currentDsName[0] = parts[0];
+							currentTableName[0] = resolveAlias(context, parts[1]);
+							return true;
+						} else {
+							isExternalDb[0] = false;
+							String originalEntityName = resolveAlias(context, sheetName);
+							currentEntityType[0] = resolveEntityType(originalEntityName);
+							if (currentEntityType[0] == null) {
+								throw new MendixRuntimeException(
+										"[MxDBUnit Error] Could not resolve Mendix Entity for sheet: '" + sheetName +
+												"' (Resolved Name: '" + originalEntityName
+												+ "'). Please check entity existence or #Alias definition.");
+							}
+							return true;
+						}
+					},
+					rowProcessor);
+
+			if (!commitBuffer.isEmpty()) {
+				Core.commit(context, commitBuffer);
+				commitBuffer.clear();
+			}
 		}
 	}
 
@@ -158,13 +161,13 @@ public class ExcelDataLoader {
 		return EntityResolver.resolve(sheetName);
 	}
 
-	private static void cleanTargetEntities(IContext context, File excelFile) throws Exception {
+	private static void cleanTargetEntities(IContext context, OPCPackage pkg) throws Exception {
 		Set<String> deletedEntities = (Set) context.getData().get("DeletedEntities");
 		if (deletedEntities == null) {
 			deletedEntities = new HashSet<>();
 			context.getData().put("DeletedEntities", deletedEntities);
 		}
-		List<String> targetEntities = getTargetEntitiesInOrder(context, excelFile);
+		List<String> targetEntities = getTargetEntitiesInOrder(context, pkg);
 		// Perform deletion in reverse order (child to parent), taking dependencies into account.
 		Collections.reverse(targetEntities);
 		for (String entityType : targetEntities) {
@@ -185,14 +188,14 @@ public class ExcelDataLoader {
 		}
 	}
 
-	private static void cleanExternalTables(IContext context, File excelFile) throws Exception {
+	private static void cleanExternalTables(IContext context, OPCPackage pkg) throws Exception {
 		Set<String> deletedExtTables = (Set<String>) context.getData().get("DeletedExtTables");
 		if (deletedExtTables == null) {
 			deletedExtTables = new HashSet<>();
 			context.getData().put("DeletedExtTables", deletedExtTables);
 		}
 		// Extract sheets in Excel linked to an external database (DSName:TableName) and sort them in reverse order (Child -> Parent).
-		List<String> extTargets = getExternalTargetsInOrder(excelFile);
+		List<String> extTargets = getExternalTargetsInOrder(pkg);
 		Collections.reverse(extTargets);
 		for (String target : extTargets) {
 			if (deletedExtTables.contains(target)) {
@@ -215,41 +218,37 @@ public class ExcelDataLoader {
 		}
 	}
 
-	private static List<String> getTargetEntitiesInOrder(IContext context, File excelFile) throws Exception {
+	private static List<String> getTargetEntitiesInOrder(IContext context, OPCPackage pkg) throws Exception {
 		List<String> entities = new ArrayList<>();
-		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
-			XSSFReader reader = new XSSFReader(pkg);
-			XSSFReader.SheetIterator sheets = (XSSFReader.SheetIterator) reader.getSheetsData();
-			while (sheets.hasNext()) {
-				sheets.next();
-				String rawSheetName = sheets.getSheetName();
-				// Include assertion sheets in the items to be deleted.
-				String sheetName = rawSheetName.startsWith("=") ? rawSheetName.substring(1) : rawSheetName;
-				if (!isExternal(sheetName) && isTargetSheet(sheetName)) {
-					String originalEntityName = resolveAlias(context, sheetName);
-					String entityType = EntityResolver.resolve(originalEntityName);
-					if (entityType != null && !entities.contains(entityType)) {
-						entities.add(entityType);
-					}
+		XSSFReader reader = new XSSFReader(pkg);
+		XSSFReader.SheetIterator sheets = (XSSFReader.SheetIterator) reader.getSheetsData();
+		while (sheets.hasNext()) {
+			sheets.next();
+			String rawSheetName = sheets.getSheetName();
+			// Include assertion sheets in the items to be deleted.
+			String sheetName = rawSheetName.startsWith("=") ? rawSheetName.substring(1) : rawSheetName;
+			if (!isExternal(sheetName) && isTargetSheet(sheetName)) {
+				String originalEntityName = resolveAlias(context, sheetName);
+				String entityType = EntityResolver.resolve(originalEntityName);
+				if (entityType != null && !entities.contains(entityType)) {
+					entities.add(entityType);
 				}
 			}
 		}
 		return entities;
 	}
 
-	private static List<String> getExternalTargetsInOrder(File excelFile) throws Exception {
+	private static List<String> getExternalTargetsInOrder(OPCPackage pkg) throws Exception {
 		List<String> targets = new ArrayList<>();
-		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
-			XSSFReader reader = new XSSFReader(pkg);
-			XSSFReader.SheetIterator sheets = (XSSFReader.SheetIterator) reader.getSheetsData();
-			while (sheets.hasNext()) {
-				sheets.next(); // It simply opens the stream without parsing the internal XML.
-				String rawSheetName = sheets.getSheetName();
-				// Include assertion sheets in the items to be deleted.
-				String targetName = rawSheetName.startsWith("=") ? rawSheetName.substring(1) : rawSheetName;
-				if (isExternal(targetName) && !targets.contains(targetName)) {
-					targets.add(targetName);
-				}
+		XSSFReader reader = new XSSFReader(pkg);
+		XSSFReader.SheetIterator sheets = (XSSFReader.SheetIterator) reader.getSheetsData();
+		while (sheets.hasNext()) {
+			sheets.next(); // It simply opens the stream without parsing the internal XML.
+			String rawSheetName = sheets.getSheetName();
+			// Include assertion sheets in the items to be deleted.
+			String targetName = rawSheetName.startsWith("=") ? rawSheetName.substring(1) : rawSheetName;
+			if (isExternal(targetName) && !targets.contains(targetName)) {
+				targets.add(targetName);
 			}
 		}
 		return targets;
@@ -410,9 +409,9 @@ public class ExcelDataLoader {
 	}
 
 	// Scan the '#Alias' sheet in Excel and store it in a conversion map.
-	public static Map<String, String> loadAliases(IContext context, File excelFile) throws Exception {
+	public static Map<String, String> loadAliases(IContext context, OPCPackage pkg, String currentPath) throws Exception {
 		// Perform the check while retaining the file path and cache key of the last loaded file.
-		String currentPath = excelFile.getAbsolutePath();
+		//String currentPath = excelFile.getAbsolutePath();
 		String lastLoadedPath = (String) context.getData().get("NameAliases_LoadedPath");
 		Map<String, String> aliasMap = (Map<String, String>) context.getData().get("NameAliases");
 
@@ -423,7 +422,7 @@ public class ExcelDataLoader {
 		aliasMap = new HashMap<>();
 		final Map<String, String> finalAliasMap = aliasMap;
 		XssfExcelReader.readAllSheets(
-				excelFile,
+				pkg,
 				sheetName -> "#Alias".equalsIgnoreCase(sheetName),
 				new XssfExcelRowProcessor() {
 					@Override

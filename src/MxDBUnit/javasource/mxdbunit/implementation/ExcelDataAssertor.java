@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.poi.openxml4j.opc.OPCPackage;
+
 import com.mendix.core.Core;
 import com.mendix.logging.ILogNode;
 import com.mendix.systemwideinterfaces.MendixRuntimeException;
@@ -26,153 +28,158 @@ public class ExcelDataAssertor {
 
 		String replacedFilePath = ExcelDataLoader.convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
-		ExcelDataLoader.loadAliases(context, excelFile);
+		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
+			ExcelDataLoader.loadAliases(context, pkg, excelFile.getAbsolutePath());
 
-		// A map holding the row data (including headers) for each sheet.
-		// SheetName -> List<RowDataMap>
-		Map<String, List<Map<String, String>>> expectedSheetsData = new HashMap<>();
-		List<String> sheetOrder = new ArrayList<>(); // Preserve sheet appearance order
+			// A map holding the row data (including headers) for each sheet.
+			// SheetName -> List<RowDataMap>
+			Map<String, List<Map<String, String>>> expectedSheetsData = new HashMap<>();
+			List<String> sheetOrder = new ArrayList<>(); // Preserve sheet appearance order
 
-		// ----------------------------------------------------
-		// Phase 1: Collect only sheets using XssfExcelReader
-		// ----------------------------------------------------
-		XssfExcelReader.readAllSheets(
-				excelFile,
-				// 1. SheetFilter: Applies only to sheets starting with =
-				sheetName -> {
-					if (sheetName.startsWith("=")) {
-						if (!ExcelDataLoader.isExternal(sheetName)) {
-							String rawTargetName = sheetName.substring(1);
-							String originalName = ExcelDataLoader.resolveAlias(context, rawTargetName);
-							String entityName = EntityResolver.resolve(originalName);
-							if (entityName == null) {
-								throw new MendixRuntimeException(
-										"[MxDBUnit Error] assertAll failed to resolve entity for sheet '" + sheetName +
-												"' (Resolved OriginalName: '" + originalName
-												+ "'). Please check #Alias definition.");
-							}
-							IMetaObject mo = Core.getMetaObject(entityName);
-							if (!mo.isPersistable()) {
-								logger.warn("[MxDBUnit] assertAll skips sheetName \"" + sheetName
-										+ "\" that is no-persistent entity name.");
-								return false;
-							}
-						}
-
-						sheetOrder.add(sheetName);
-						expectedSheetsData.put(sheetName, new ArrayList<>());
-						return true;
-					}
-					return false;
-				},
-				// 2. RowProcessor: Accumulate row data into a list for each sheet.
-				new XssfExcelRowProcessor() {
-					private String activeSheetName;
-
-					@Override
-					public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
-						// Identify the name of the sheet currently being processed (the last sheet)
-						if (activeSheetName == null || rowIndex == 1) {
-							activeSheetName = sheetOrder.get(sheetOrder.size() - 1);
-							setupColumnNameMap(rowData);
-							// Create a map of the header row (index 0) for DataSetAssertor, and add it after removing the SubCaseId.
-							Map<String, String> headerRow = new HashMap<>();
-							for (Map.Entry<String, String> entry : rowData.entrySet()) {
-								String header = getHeaderName(entry.getKey());
-								if (header != null && !ExcelDataLoader.SUB_TEST_CASE_HEADER.equalsIgnoreCase(header)) {
-									headerRow.put(header, header);
+			// ----------------------------------------------------
+			// Phase 1: Collect only sheets using XssfExcelReader
+			// ----------------------------------------------------
+			XssfExcelReader.readAllSheets(
+					pkg,
+					// 1. SheetFilter: Applies only to sheets starting with =
+					sheetName -> {
+						if (sheetName.startsWith("=")) {
+							if (!ExcelDataLoader.isExternal(sheetName)) {
+								String rawTargetName = sheetName.substring(1);
+								String originalName = ExcelDataLoader.resolveAlias(context, rawTargetName);
+								String entityName = EntityResolver.resolve(originalName);
+								if (entityName == null) {
+									throw new MendixRuntimeException(
+											"[MxDBUnit Error] assertAll failed to resolve entity for sheet '"
+													+ sheetName +
+													"' (Resolved OriginalName: '" + originalName
+													+ "'). Please check #Alias definition.");
+								}
+								IMetaObject mo = Core.getMetaObject(entityName);
+								if (!mo.isPersistable()) {
+									logger.warn("[MxDBUnit] assertAll skips sheetName \"" + sheetName
+											+ "\" that is no-persistent entity name.");
+									return false;
 								}
 							}
-							expectedSheetsData.get(activeSheetName).add(headerRow); // Register at index 0
-							return;
+
+							sheetOrder.add(sheetName);
+							expectedSheetsData.put(sheetName, new ArrayList<>());
+							return true;
 						}
-						// Creating a RowMap with keys replaced by header names
-						Map<String, String> formattedRow = new HashMap<>();
-						for (Map.Entry<String, String> entry : rowData.entrySet()) {
-							String header = getHeaderName(entry.getKey());
-							if (header != null) {
-								formattedRow.put(header, entry.getValue());
+						return false;
+					},
+					// 2. RowProcessor: Accumulate row data into a list for each sheet.
+					new XssfExcelRowProcessor() {
+						private String activeSheetName;
+
+						@Override
+						public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
+							// Identify the name of the sheet currently being processed (the last sheet)
+							if (activeSheetName == null || rowIndex == 1) {
+								activeSheetName = sheetOrder.get(sheetOrder.size() - 1);
+								setupColumnNameMap(rowData);
+								// Create a map of the header row (index 0) for DataSetAssertor, and add it after removing the SubCaseId.
+								Map<String, String> headerRow = new HashMap<>();
+								for (Map.Entry<String, String> entry : rowData.entrySet()) {
+									String header = getHeaderName(entry.getKey());
+									if (header != null
+											&& !ExcelDataLoader.SUB_TEST_CASE_HEADER.equalsIgnoreCase(header)) {
+										headerRow.put(header, header);
+									}
+								}
+								expectedSheetsData.get(activeSheetName).add(headerRow); // Register at index 0
+								return;
 							}
+							// Creating a RowMap with keys replaced by header names
+							Map<String, String> formattedRow = new HashMap<>();
+							for (Map.Entry<String, String> entry : rowData.entrySet()) {
+								String header = getHeaderName(entry.getKey());
+								if (header != null) {
+									formattedRow.put(header, entry.getValue());
+								}
+							}
+							// Row filtering by SubCase ID
+							if (!ExcelDataLoader.shouldProcessRow(subCaseId, formattedRow, activeSheetName)) {
+								return;
+							}
+							expectedSheetsData.get(activeSheetName).add(formattedRow);
 						}
-						// Row filtering by SubCase ID
-						if (!ExcelDataLoader.shouldProcessRow(subCaseId, formattedRow, activeSheetName)) {
-							return;
-						}
-						expectedSheetsData.get(activeSheetName).add(formattedRow);
-					}
-				});
+					});
 
-		// ----------------------------------------------------
-		// Phase 2: Retrieve actual data from the database for each sheet and verify it.
-		// ----------------------------------------------------
-		StringBuilder aggregatedErrors = new StringBuilder();
-		int failureCount = 0;
+			// ----------------------------------------------------
+			// Phase 2: Retrieve actual data from the database for each sheet and verify it.
+			// ----------------------------------------------------
+			StringBuilder aggregatedErrors = new StringBuilder();
+			int failureCount = 0;
 
-		for (String expectedSheetName : sheetOrder) {
-			List<Map<String, String>> expectedRows = expectedSheetsData.get(expectedSheetName);
-			if (expectedRows == null || expectedRows.isEmpty()) {
-				continue;
-			}
-
-			// Get the pure target name with the leading "=" removed (e.g., "DSName:TableName" or "Customer").
-			String targetLocalName = expectedSheetName.substring(1);
-
-			try {
-				if (ExcelDataLoader.isExternal(targetLocalName)) {
-					String[] parts = targetLocalName.split(ExcelDataLoader.DS_SEP_REGEXP, 2);
-					String dsName = parts[0];
-					String aliasTableName = parts[1];
-					// Resolved physical table name (prioritizes the A1 override if present; otherwise, uses the default)
-					String originalTableName = ExcelDataLoader.resolveAlias(context, aliasTableName);
-					// Retrieve via JDBC & merge into DataSetAssertor.compareMaps
-					AssertExtByExcel.assertTable(context, expectedSheetName, dsName, originalTableName, expectedRows);
-				} else {
-					String originalEntityName = ExcelDataLoader.resolveAlias(context, targetLocalName);
-					String targetEntityType = EntityResolver.resolve(originalEntityName);
-					if (targetEntityType == null) {
-						aggregatedErrors.append("\n[MxDBUnit Error] Could not resolve entity for sheet: ")
-								.append(expectedSheetName).append("\n");
-						failureCount++;
-						continue;
-					}
-					// Retrieve all actual data records from the Mendix database.
-					List<IMendixObject> actualObjects = Core.createXPathQuery("//" + targetEntityType)
-							.execute(context);
-					// Merge Assert Execution for Mendix & DataSetAssertor.compareMaps
-					AssertMendixByExcel.assertTable(
-							context,
-							expectedSheetName,
-							expectedRows,
-							actualObjects,
-							identityResolver);
+			for (String expectedSheetName : sheetOrder) {
+				List<Map<String, String>> expectedRows = expectedSheetsData.get(expectedSheetName);
+				if (expectedRows == null || expectedRows.isEmpty()) {
+					continue;
 				}
-			} catch (AssertionError e) {
-				// Catch individual sheet errors and append them to the report.
-				failureCount++;
-				aggregatedErrors.append(e.getMessage()).append("\n");
-			} catch (Exception e) {
-				failureCount++;
-				aggregatedErrors.append("\n[MxDBUnit Exception] Error processing sheet ")
-						.append(expectedSheetName).append(": ").append(e.getMessage()).append("\n");
-				logger.error("[MxDBUnit Exception] Error processing sheet:" + expectedSheetName, e);
-			}
-		}
 
-		// ----------------------------------------------------
-		// Phase 3: Throw an exception if there is even a single mismatching sheet.
-		// ----------------------------------------------------
-		if (failureCount > 0) {
-			StringBuilder finalReport = new StringBuilder();
-			finalReport.append("\n==================================================");
-			finalReport.append("\n[MxDBUnit] Total Failures Detected: ").append(failureCount).append(" Sheet(s)");
-			// If a SubCase ID is specified, state it clearly in the header.
-			if (subCaseId != null && !subCaseId.trim().isEmpty()) {
-				finalReport.append(" [SubCaseId: ").append(subCaseId.trim()).append("]");
-			}
-			finalReport.append("\n==================================================");
-			finalReport.append(aggregatedErrors);
+				// Get the pure target name with the leading "=" removed (e.g., "DSName:TableName" or "Customer").
+				String targetLocalName = expectedSheetName.substring(1);
 
-			throw new AssertionError(finalReport.toString());
+				try {
+					if (ExcelDataLoader.isExternal(targetLocalName)) {
+						String[] parts = targetLocalName.split(ExcelDataLoader.DS_SEP_REGEXP, 2);
+						String dsName = parts[0];
+						String aliasTableName = parts[1];
+						// Resolved physical table name (prioritizes the A1 override if present; otherwise, uses the default)
+						String originalTableName = ExcelDataLoader.resolveAlias(context, aliasTableName);
+						// Retrieve via JDBC & merge into DataSetAssertor.compareMaps
+						AssertExtByExcel.assertTable(context, expectedSheetName, dsName, originalTableName,
+								expectedRows);
+					} else {
+						String originalEntityName = ExcelDataLoader.resolveAlias(context, targetLocalName);
+						String targetEntityType = EntityResolver.resolve(originalEntityName);
+						if (targetEntityType == null) {
+							aggregatedErrors.append("\n[MxDBUnit Error] Could not resolve entity for sheet: ")
+									.append(expectedSheetName).append("\n");
+							failureCount++;
+							continue;
+						}
+						// Retrieve all actual data records from the Mendix database.
+						List<IMendixObject> actualObjects = Core.createXPathQuery("//" + targetEntityType)
+								.execute(context);
+						// Merge Assert Execution for Mendix & DataSetAssertor.compareMaps
+						AssertMendixByExcel.assertTable(
+								context,
+								expectedSheetName,
+								expectedRows,
+								actualObjects,
+								identityResolver);
+					}
+				} catch (AssertionError e) {
+					// Catch individual sheet errors and append them to the report.
+					failureCount++;
+					aggregatedErrors.append(e.getMessage()).append("\n");
+				} catch (Exception e) {
+					failureCount++;
+					aggregatedErrors.append("\n[MxDBUnit Exception] Error processing sheet ")
+							.append(expectedSheetName).append(": ").append(e.getMessage()).append("\n");
+					logger.error("[MxDBUnit Exception] Error processing sheet:" + expectedSheetName, e);
+				}
+			}
+
+			// ----------------------------------------------------
+			// Phase 3: Throw an exception if there is even a single mismatching sheet.
+			// ----------------------------------------------------
+			if (failureCount > 0) {
+				StringBuilder finalReport = new StringBuilder();
+				finalReport.append("\n==================================================");
+				finalReport.append("\n[MxDBUnit] Total Failures Detected: ").append(failureCount).append(" Sheet(s)");
+				// If a SubCase ID is specified, state it clearly in the header.
+				if (subCaseId != null && !subCaseId.trim().isEmpty()) {
+					finalReport.append(" [SubCaseId: ").append(subCaseId.trim()).append("]");
+				}
+				finalReport.append("\n==================================================");
+				finalReport.append(aggregatedErrors);
+
+				throw new AssertionError(finalReport.toString());
+			}
 		}
 	}
 }
