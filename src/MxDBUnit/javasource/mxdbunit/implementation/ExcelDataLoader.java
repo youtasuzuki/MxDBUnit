@@ -73,7 +73,11 @@ public class ExcelDataLoader {
 				if (rowIndex == 1) {
 					if (isExternalDb[0]) {
 						extColumnNames.clear();
-						extColumnNames.addAll(rowData.values());
+						for (String colVal : rowData.values()) {
+							if (!SUB_TEST_CASE_HEADER.equalsIgnoreCase(colVal)) {
+								extColumnNames.add(colVal);
+							}
+						}
 						setupColumnNameMap(rowData);
 					} else {
 						setupColumnNameMap(rowData);
@@ -95,7 +99,7 @@ public class ExcelDataLoader {
 				// Remove the SubCaseId column from rowData for createIMendixObject
 				String subCaseColKey = getColumnName(SUB_TEST_CASE_HEADER);
 				if (subCaseColKey != null) {
-				    rowData.remove(subCaseColKey);
+					rowData.remove(subCaseColKey);
 				}
 				if (isExternalDb[0]) {
 					executeExtDbInsert(context, currentDsName[0], currentTableName[0], extColumnNames, formattedRow);
@@ -462,31 +466,30 @@ public class ExcelDataLoader {
 	// A common helper to determine whether it matches the specified subCaseId
 	public static boolean shouldProcessRow(String targetSubCase, Map<String, String> formattedRow, String sheetName) {
 		boolean isSubCaseSpecified = targetSubCase != null && !targetSubCase.trim().isEmpty();
-	    boolean hasSubCaseHeader = formattedRow.containsKey(SUB_TEST_CASE_HEADER);
-	    // 1. When a parameter is specified, but the corresponding column does not exist in the Excel file
-	    if (isSubCaseSpecified && !hasSubCaseHeader) {
-	        throw new IllegalArgumentException(
-	            "[MxDBUnit Error] The subCaseId '" + targetSubCase + "' was specified, but the Excel sheet '" + sheetName + "' does not contain the '" 
-	            + SUB_TEST_CASE_HEADER + "' column. Please check the header."
-	        );
-	    }
-	    // 2. When an Excel file contains a 'SubCaseId' column, even though no parameter has been specified
-	    if (!isSubCaseSpecified && hasSubCaseHeader) {
-	        throw new IllegalArgumentException(
-	            "[MxDBUnit Error] The Excel sheet '" + sheetName + "' contains the '" + SUB_TEST_CASE_HEADER 
-	            + "' column, but no subCaseId parameter was provided in the Java Action. Please specify a valid subCaseId."
-	        );
-	    }
-	    // 3. Neither exists (the conventional case involving processing of all rows)）
-	    if (!isSubCaseSpecified && !hasSubCaseHeader) {
-	        return true;
-	    }
-	    // 4. Filter evaluation when both are present
-	    String rowSubCase = formattedRow.get(SUB_TEST_CASE_HEADER);
-	    	    // Remove any extra columns so that they do not remain for subsequent processing (such as in `DataSetAssertor`).
-	    formattedRow.remove(SUB_TEST_CASE_HEADER);
-	    // Only rows with a blank value (in the common column) or a matching SubCase ID are to be processed.
-	    return "*".equals(rowSubCase.trim()) 
-	            || rowSubCase.trim().equalsIgnoreCase(targetSubCase.trim());
+		boolean hasSubCaseHeader = formattedRow.containsKey(SUB_TEST_CASE_HEADER);
+		// 1. When a parameter is specified, but the corresponding column does not exist in the Excel file
+		if (isSubCaseSpecified && !hasSubCaseHeader) {
+			throw new IllegalArgumentException(
+					"[MxDBUnit Error] The subCaseId '" + targetSubCase + "' was specified, but the Excel sheet '"
+							+ sheetName + "' does not contain the '"
+							+ SUB_TEST_CASE_HEADER + "' column. Please check the header.");
+		}
+		// 2. When an Excel file contains a 'SubCaseId' column, even though no parameter has been specified
+		if (!isSubCaseSpecified && hasSubCaseHeader) {
+			throw new IllegalArgumentException(
+					"[MxDBUnit Error] The Excel sheet '" + sheetName + "' contains the '" + SUB_TEST_CASE_HEADER
+							+ "' column, but no subCaseId parameter was provided in the Java Action. Please specify a valid subCaseId.");
+		}
+		// 3. Neither exists (the conventional case involving processing of all rows)）
+		if (!isSubCaseSpecified && !hasSubCaseHeader) {
+			return true;
+		}
+		// 4. Filter evaluation when both are present
+		String rowSubCase = formattedRow.get(SUB_TEST_CASE_HEADER);
+		// Remove any extra columns so that they do not remain for subsequent processing (such as in `DataSetAssertor`).
+		formattedRow.remove(SUB_TEST_CASE_HEADER);
+		// Only rows with a blank value (in the common column) or a matching SubCase ID are to be processed.
+		return "*".equals(rowSubCase.trim())
+				|| rowSubCase.trim().equalsIgnoreCase(targetSubCase.trim());
 	}
 }
