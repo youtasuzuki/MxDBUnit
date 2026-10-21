@@ -103,6 +103,9 @@ public class UserActionsRegistrar
     registrator.registerUserAction(communitycommons.actions.YearsBetween.class);
     registrator.registerUserAction(feedbackmodule.actions.ValidateEmail.class);
     registrator.registerUserAction(feedbackmodule.actions.XSS_Sanitizer.class);
+    registrator.registerUserAction(memoryusage.actions.ExecuteGC.class);
+    registrator.registerUserAction(memoryusage.actions.GetMemoryUsageString.class);
+    registrator.registerUserAction(memoryusage.actions.StartMemoryUsageLogging.class);
     registrator.registerUserAction(mxdbunit.actions.AssertAllByExcel.class);
     registrator.registerUserAction(mxdbunit.actions.AssertListByExcel.class);
     registrator.registerUserAction(mxdbunit.actions.GetLoadedNPE.class);

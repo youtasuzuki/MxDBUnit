@@ -48,7 +48,9 @@ public class ExtDbBridge {
 		// 1. If a valid, already-acquired connection exists in ThreadLocal, reuse it immediately.
 		Connection existingConn = connMap.get(dsName);
 		if (existingConn != null && !existingConn.isClosed()) {
-			logger.debug("[MxDBUnit] Reusing existing connection for DS: " + dsName);
+			if (logger.isDebugEnabled()) {
+				logger.debug("[MxDBUnit] Reusing existing connection for DS: " + dsName);
+			}
 			return existingConn;
 		}
 
@@ -76,7 +78,9 @@ public class ExtDbBridge {
 		if (getExtDbRollbackMode()) {
 			Method setTestModeMethod = conn.getClass().getMethod("setTestMode", boolean.class);
 			setTestModeMethod.invoke(conn, true);
-			logger.debug("[MxDBUnit] Successfully set testMode=true for DS: " + dsName);
+			if (logger.isDebugEnabled()) {
+				logger.debug("[MxDBUnit] Successfully set testMode=true for DS: " + dsName);
+			}
 		} else {
 			logger.warn("[MxDBUnit] ExtDbRollbackMode is false; skipping set Test Mode for Connection DS: " + dsName);
 		}
@@ -126,7 +130,9 @@ public class ExtDbBridge {
 
 		connMap.clear();
 		threadConnectionMap.remove();
-		logger.debug("[MxDBUnit] finish cleanupAllThreadConnections");
+		if (logger.isDebugEnabled()) {
+			logger.debug("[MxDBUnit] finish cleanupAllThreadConnections");
+		}
 	}
 
 	private static void ensureTwoWaySqlAvailable() throws ClassNotFoundException {

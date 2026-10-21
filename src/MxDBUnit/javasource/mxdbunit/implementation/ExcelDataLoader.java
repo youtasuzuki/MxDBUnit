@@ -61,98 +61,97 @@ public class ExcelDataLoader {
 
 		String replacedFilePath = convertPath(excelFilePath);
 		File excelFile = new File(replacedFilePath);
-		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
-			loadAliases(context, pkg, excelFile.getAbsolutePath());
-			if (doClean) {
-				cleanTargetEntities(context, pkg);
-				cleanExternalTables(context, pkg);
-			}
+		OPCPackage pkg = OPCPackageCache.getOPCPackage(excelFile);
+		loadAliases(context, pkg, excelFile.getAbsolutePath());
+		if (doClean) {
+			cleanTargetEntities(context, pkg);
+			cleanExternalTables(context, pkg);
+		}
 
-			XssfExcelReader.RowProcessor rowProcessor = new XssfExcelRowProcessor() {
-				@Override
-				public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
-					if (rowIndex == 1) {
-						if (isExternalDb[0]) {
-							extColumnNames.clear();
-							for (String colVal : rowData.values()) {
-								if (!SUB_TEST_CASE_HEADER.equalsIgnoreCase(colVal)) {
-									extColumnNames.add(colVal);
-								}
-							}
-							setupColumnNameMap(rowData);
-						} else {
-							setupColumnNameMap(rowData);
-						}
-						return;
-					}
-					// Create a map that converts column identifiers (A, B...) into header names (*USER_ID, NAME...).
-					Map<String, String> formattedRow = new HashMap<>();
-					for (Map.Entry<String, String> entry : rowData.entrySet()) {
-						String header = getHeaderName(entry.getKey()); // Example: "A" -> "*USER_ID"
-						if (header != null) {
-							formattedRow.put(header, entry.getValue());
-						}
-					}
-					// Row filtering by SubCase ID (skipping non-matching rows)
-					if (!shouldProcessRow(subCaseId, formattedRow, currentSheetName[0])) {
-						return;
-					}
-					// Remove the SubCaseId column from rowData for createIMendixObject
-					String subCaseColKey = getColumnName(SUB_TEST_CASE_HEADER);
-					if (subCaseColKey != null) {
-						rowData.remove(subCaseColKey);
-					}
+		XssfExcelReader.RowProcessor rowProcessor = new XssfExcelRowProcessor() {
+			@Override
+			public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
+				if (rowIndex == 1) {
 					if (isExternalDb[0]) {
-						executeExtDbInsert(context, currentDsName[0], currentTableName[0], extColumnNames,
-								formattedRow);
+						extColumnNames.clear();
+						for (String colVal : rowData.values()) {
+							if (!SUB_TEST_CASE_HEADER.equalsIgnoreCase(colVal)) {
+								extColumnNames.add(colVal);
+							}
+						}
+						setupColumnNameMap(rowData);
 					} else {
-						IMendixObject obj = createIMendixObject(
-								context, currentEntityType[0], rowData, timeZoneId, identityResolver, rowIndex);
-						if (!obj.getMetaObject().isPersistable()) {
-							// Add to the list of non-persistent entity object maps in the context.
-							npeMap.computeIfAbsent(currentEntityType[0], k -> new ArrayList<>()).add(obj);
-						}
-						commitBuffer.add(obj);
-						if (commitBuffer.size() >= 100) {
-							Core.commit(context, commitBuffer);
-							commitBuffer.clear();
-						}
+						setupColumnNameMap(rowData);
+					}
+					return;
+				}
+				// Create a map that converts column identifiers (A, B...) into header names (*USER_ID, NAME...).
+				Map<String, String> formattedRow = new HashMap<>();
+				for (Map.Entry<String, String> entry : rowData.entrySet()) {
+					String header = getHeaderName(entry.getKey()); // Example: "A" -> "*USER_ID"
+					if (header != null) {
+						formattedRow.put(header, entry.getValue());
 					}
 				}
-			};
-			XssfExcelReader.readAllSheets(
-					pkg,
-					// Sheet Evaluation (SheetFilter)
-					sheetName -> {
-						if (!isTargetSheet(sheetName)) {
-							return false;
-						}
-						currentSheetName[0] = sheetName;
-						if (isExternal(sheetName)) {
-							isExternalDb[0] = true;
-							String[] parts = sheetName.split(DS_SEP_REGEXP, 2);
-							currentDsName[0] = parts[0];
-							currentTableName[0] = resolveAlias(context, parts[1]);
-							return true;
-						} else {
-							isExternalDb[0] = false;
-							String originalEntityName = resolveAlias(context, sheetName);
-							currentEntityType[0] = resolveEntityType(originalEntityName);
-							if (currentEntityType[0] == null) {
-								throw new MendixRuntimeException(
-										"[MxDBUnit Error] Could not resolve Mendix Entity for sheet: '" + sheetName +
-												"' (Resolved Name: '" + originalEntityName
-												+ "'). Please check entity existence or #Alias definition.");
-							}
-							return true;
-						}
-					},
-					rowProcessor);
-
-			if (!commitBuffer.isEmpty()) {
-				Core.commit(context, commitBuffer);
-				commitBuffer.clear();
+				// Row filtering by SubCase ID (skipping non-matching rows)
+				if (!shouldProcessRow(subCaseId, formattedRow, currentSheetName[0])) {
+					return;
+				}
+				// Remove the SubCaseId column from rowData for createIMendixObject
+				String subCaseColKey = getColumnName(SUB_TEST_CASE_HEADER);
+				if (subCaseColKey != null) {
+					rowData.remove(subCaseColKey);
+				}
+				if (isExternalDb[0]) {
+					executeExtDbInsert(context, currentDsName[0], currentTableName[0], extColumnNames,
+							formattedRow);
+				} else {
+					IMendixObject obj = createIMendixObject(
+							context, currentEntityType[0], rowData, timeZoneId, identityResolver, rowIndex);
+					if (!obj.getMetaObject().isPersistable()) {
+						// Add to the list of non-persistent entity object maps in the context.
+						npeMap.computeIfAbsent(currentEntityType[0], k -> new ArrayList<>()).add(obj);
+					}
+					commitBuffer.add(obj);
+					if (commitBuffer.size() >= 100) {
+						Core.commit(context, commitBuffer);
+						commitBuffer.clear();
+					}
+				}
 			}
+		};
+		XssfExcelReader.readAllSheets(
+				pkg,
+				// Sheet Evaluation (SheetFilter)
+				sheetName -> {
+					if (!isTargetSheet(sheetName)) {
+						return false;
+					}
+					currentSheetName[0] = sheetName;
+					if (isExternal(sheetName)) {
+						isExternalDb[0] = true;
+						String[] parts = sheetName.split(DS_SEP_REGEXP, 2);
+						currentDsName[0] = parts[0];
+						currentTableName[0] = resolveAlias(context, parts[1]);
+						return true;
+					} else {
+						isExternalDb[0] = false;
+						String originalEntityName = resolveAlias(context, sheetName);
+						currentEntityType[0] = resolveEntityType(originalEntityName);
+						if (currentEntityType[0] == null) {
+							throw new MendixRuntimeException(
+									"[MxDBUnit Error] Could not resolve Mendix Entity for sheet: '" + sheetName +
+											"' (Resolved Name: '" + originalEntityName
+											+ "'). Please check entity existence or #Alias definition.");
+						}
+						return true;
+					}
+				},
+				rowProcessor);
+
+		if (!commitBuffer.isEmpty()) {
+			Core.commit(context, commitBuffer);
+			commitBuffer.clear();
 		}
 	}
 
@@ -409,7 +408,8 @@ public class ExcelDataLoader {
 	}
 
 	// Scan the '#Alias' sheet in Excel and store it in a conversion map.
-	public static Map<String, String> loadAliases(IContext context, OPCPackage pkg, String currentPath) throws Exception {
+	public static Map<String, String> loadAliases(IContext context, OPCPackage pkg, String currentPath)
+			throws Exception {
 		// Perform the check while retaining the file path and cache key of the last loaded file.
 		//String currentPath = excelFile.getAbsolutePath();
 		String lastLoadedPath = (String) context.getData().get("NameAliases_LoadedPath");

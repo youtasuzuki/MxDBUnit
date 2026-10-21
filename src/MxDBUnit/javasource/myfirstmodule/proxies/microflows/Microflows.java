@@ -35,6 +35,16 @@ public final class Microflows
 	{
 		aCT_LoadSample2Builder().execute(context);
 	}
+	public static com.mendix.core.actionmanagement.MicroflowCallBuilder aCT_LogMemoryUsageBuilder()
+	{
+		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.ACT_LogMemoryUsage");
+		return builder;
+	}
+
+	public static void aCT_LogMemoryUsage(IContext context)
+	{
+		aCT_LogMemoryUsageBuilder().execute(context);
+	}
 	public static com.mendix.core.actionmanagement.MicroflowCallBuilder aSU_StartupBuilder()
 	{
 		com.mendix.core.actionmanagement.MicroflowCallBuilder builder = Core.microflowCall("MyFirstModule.ASU_Startup");

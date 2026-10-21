@@ -11,6 +11,7 @@ package mxdbunit.actions;
 
 import com.mendix.systemwideinterfaces.core.IContext;
 import com.mendix.systemwideinterfaces.core.UserAction;
+import mxdbunit.implementation.OPCPackageCache;
 import mxdbunit.integration.ExtDbBridge;
 
 /**
@@ -32,6 +33,7 @@ public class TearDownMxDBUnit extends UserAction<java.lang.Void>
 	{
 		// BEGIN USER CODE
 		ExtDbBridge.cleanupAllThreadConnections();
+		OPCPackageCache.closeAllPackages();
 		return null;
 		// END USER CODE
 	}

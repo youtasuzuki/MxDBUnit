@@ -21,6 +21,7 @@ import com.mendix.systemwideinterfaces.core.UserAction;
 import mxdbunit.implementation.AssertMendixByExcel;
 import mxdbunit.implementation.ExcelDataLoader;
 import mxdbunit.implementation.IdentityResolver;
+import mxdbunit.implementation.OPCPackageCache;
 import mxdbunit.implementation.XssfExcelReader;
 import mxdbunit.implementation.XssfExcelRowProcessor;
 
@@ -67,65 +68,65 @@ public class AssertListByExcel extends UserAction<java.lang.Void>
 
 		String replacedFilePath = ExcelDataLoader.convertPath(targetExcelFilePath);
 		File excelFile = new File(replacedFilePath);
-		try (OPCPackage pkg = OPCPackage.open(excelFile)) {
-			// Prefix completion (allowing "=Customer" to be accepted when "Customer" is passed)
-			final String targetSheetName = this.expectedSheetName.startsWith("=")
-					? this.expectedSheetName
-					: "=" + this.expectedSheetName;
+		OPCPackage pkg = OPCPackageCache.getOPCPackage(excelFile);
+		// Prefix completion (allowing "=Customer" to be accepted when "Customer" is passed)
+		final String targetSheetName = this.expectedSheetName.startsWith("=")
+				? this.expectedSheetName
+				: "=" + this.expectedSheetName;
 
-			List<Map<String, String>> expectedRows = new ArrayList<>();
+		List<Map<String, String>> expectedRows = new ArrayList<>();
 
-			// 1. Stream parse only the specified sheets.
-			XssfExcelReader.readAllSheets(
-					pkg,
-					// Filter only the target sheet
-					sheetName -> sheetName.equalsIgnoreCase(targetSheetName),
-					// Collection of row data
-					new XssfExcelRowProcessor() {
-						@Override
-						public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
-							if (rowIndex == 1) {
-								setupColumnNameMap(rowData);
-								// Create a map of the header row (index 0) for `DataSetAssertor`, and add it after removing `SubCaseId`.
-								Map<String, String> headerRow = new HashMap<>();
-								for (Map.Entry<String, String> entry : rowData.entrySet()) {
-									String header = getHeaderName(entry.getKey());
-									if (header != null
-											&& !ExcelDataLoader.SUB_TEST_CASE_HEADER.equalsIgnoreCase(header)) {
-										headerRow.put(header, header);
-									}
-								}
-								expectedRows.add(headerRow); // Register it at index 0.
-								return;
-							}
-							Map<String, String> formattedRow = new HashMap<>();
+		// 1. Stream parse only the specified sheets.
+		XssfExcelReader.readAllSheets(
+				pkg,
+				// Filter only the target sheet
+				sheetName -> sheetName.equalsIgnoreCase(targetSheetName),
+				// Collection of row data
+				new XssfExcelRowProcessor() {
+					@Override
+					public void processRow(int rowIndex, Map<String, String> rowData) throws Exception {
+						if (rowIndex == 1) {
+							setupColumnNameMap(rowData);
+							// Create a map of the header row (index 0) for `DataSetAssertor`, and add it after removing `SubCaseId`.
+							Map<String, String> headerRow = new HashMap<>();
 							for (Map.Entry<String, String> entry : rowData.entrySet()) {
 								String header = getHeaderName(entry.getKey());
-								if (header != null) {
-									formattedRow.put(header, entry.getValue());
+								if (header != null
+										&& !ExcelDataLoader.SUB_TEST_CASE_HEADER.equalsIgnoreCase(header)) {
+									headerRow.put(header, header);
 								}
 							}
-							if (!ExcelDataLoader.shouldProcessRow(subCaseId, formattedRow, targetSheetName)) {
-								return; // Skip rows that do not match the subCaseId
-							}
-							expectedRows.add(formattedRow);
+							expectedRows.add(headerRow); // Register it at index 0.
+							return;
 						}
-					});
+						Map<String, String> formattedRow = new HashMap<>();
+						for (Map.Entry<String, String> entry : rowData.entrySet()) {
+							String header = getHeaderName(entry.getKey());
+							if (header != null) {
+								formattedRow.put(header, entry.getValue());
+							}
+						}
+						if (!ExcelDataLoader.shouldProcessRow(subCaseId, formattedRow, targetSheetName)) {
+							return; // Skip rows that do not match the subCaseId
+						}
+						expectedRows.add(formattedRow);
+					}
+				});
 
-			// If the specified sheet does not exist
-			if (expectedRows.isEmpty()) {
-				throw new IllegalArgumentException(
-						"[MxDBUnit Error] Sheet '" + targetSheetName + "' was not found in the provided Excel file.");
-			}
-
-			// 2. Calling the common core logic (DataSetAssertor)
-			AssertMendixByExcel.assertTable(
-					this.getContext(),
-					targetSheetName,
-					expectedRows,
-					this.actualList != null ? this.actualList : new ArrayList<>(),
-					identityResolver);
+		// If the specified sheet does not exist
+		if (expectedRows.isEmpty()) {
+			throw new IllegalArgumentException(
+					"[MxDBUnit Error] Sheet '" + targetSheetName + "' was not found in the provided Excel file.");
 		}
+
+		// 2. Calling the common core logic (DataSetAssertor)
+		AssertMendixByExcel.assertTable(
+				this.getContext(),
+				targetSheetName,
+				expectedRows,
+				this.actualList != null ? this.actualList : new ArrayList<>(),
+				identityResolver);
+
 		return null;
 		// END USER CODE
 	}
