@@ -2,6 +2,7 @@ package mxdbunit.implementation;
 
 import java.io.InputStream;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import org.apache.poi.openxml4j.opc.OPCPackage;
 import org.apache.poi.ss.usermodel.DataFormatter;
@@ -15,7 +16,8 @@ import org.apache.poi.xssf.usermodel.XSSFComment;
 import org.xml.sax.XMLReader;
 
 public class XssfExcelReader {
-
+	private static final Pattern DIGITS = Pattern.compile("\\d+");
+	
 	@FunctionalInterface
 	public interface SheetFilter {
 		boolean test(String sheetName) throws Exception;
@@ -66,7 +68,8 @@ public class XssfExcelReader {
 
 		@Override
 		public void cell(String cellReference, String formattedValue, XSSFComment comment) {
-			String columnName = cellReference.replaceAll("\\d", "");
+			//String columnName = cellReference.replaceAll("\\d", "");
+			String columnName = DIGITS.matcher(cellReference).replaceAll("");
 			rowData.put(columnName, formattedValue);
 		}
 

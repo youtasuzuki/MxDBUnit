@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.openxml4j.opc.PackageAccess;
 
 import com.mendix.core.Core;
 import com.mendix.logging.ILogNode;
@@ -32,7 +33,7 @@ public class OPCPackageCache {
 			if (logger.isDebugEnabled()) {
 				logger.debug("[MxDBUnit] Loading OPCPackage for file: " + excelFile.getAbsolutePath());
 			}
-			pkg = OPCPackage.open(excelFile);
+			pkg = OPCPackage.open(excelFile, PackageAccess.READ);
 			cache.put(key, pkg);
 		} else {
 			if (logger.isDebugEnabled()) {
