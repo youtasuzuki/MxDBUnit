@@ -1,0 +1,48 @@
+{
+  "version": "0.5.0",
+  "modelerVersion": "10.24.0 (build 73019)",
+  "api": [
+    {
+      "$ID": "4ad887c9-8a14-4ee9-bc8a-01eecdace847",
+      "$Type": "Projects$ModuleImpl",
+      "contents": {
+        "appStoreGuid": "",
+        "appStorePackageId": 0,
+        "appStoreVersion": "",
+        "appStoreVersionGuid": "",
+        "fromAppStore": false,
+        "isThemeModule": false,
+        "name": "MxTwoWaySqlExtension",
+        "sortIndex": 3.3868979128479304
+      }
+    },
+    {
+      "$ID": "02e84ecb-ca08-462a-b97c-1cd200b7b2f1",
+      "$Type": "DomainModels$DomainModel",
+      "containerID": "4ad887c9-8a14-4ee9-bc8a-01eecdace847",
+      "containmentName": "domainModel",
+      "contents": {
+        "associations": [],
+        "crossAssociations": [],
+        "documentation": "",
+        "entities": []
+      }
+    },
+    {
+      "$ID": "a3b6bc8d-2a42-4d49-b5c9-d98b30dbd380",
+      "$Type": "Security$ModuleSecurity",
+      "containerID": "4ad887c9-8a14-4ee9-bc8a-01eecdace847",
+      "containmentName": "moduleSecurity",
+      "contents": {
+        "moduleRoles": []
+      }
+    },
+    {
+      "$ID": "9cea8b1c-398c-4d2e-9b0b-c9c491624767",
+      "$Type": "Projects$ModuleSettings",
+      "containerID": "4ad887c9-8a14-4ee9-bc8a-01eecdace847",
+      "containmentName": "moduleSettings",
+      "contents": {}
+    }
+  ]
+}
