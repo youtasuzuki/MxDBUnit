@@ -46,6 +46,11 @@ public class ExcelDataAssertor {
 					if (sheetName.startsWith("=")) {
 						if (!ExcelDataLoader.isExternal(sheetName)) {
 							String rawTargetName = sheetName.substring(1);
+							if (rawTargetName.startsWith("@")) {
+								logger.warn("[MxDBUnit] assertAll skips sheetName \"" + sheetName
+										+ "\" that is marked to be target of AssertListByExcel.");
+								return false;
+							}
 							String originalName = ExcelDataLoader.resolveAlias(context, rawTargetName);
 							String entityName = EntityResolver.resolve(originalName);
 							if (entityName == null) {
